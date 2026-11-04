@@ -7,6 +7,12 @@ description: ใช้ทุกครั้งที่สร้างหรื�
 
 โปรเจกต์นี้จัดโค้ดแบบ Domain-Driven Design: ระดับบนแบ่งตาม bounded context ข้างในแบ่งเป็น 4 ชั้น กฎธุรกิจอยู่ใน domain เท่านั้น
 
+## หมายเหตุ: โปรเจกต์นี้เป็น frontend ล้วน (UC-01)
+ยังไม่มี backend หรือ database ระหว่างนี้ให้ตีความกติกาดังนี้
+- `infrastructure` คือ repository แบบ in-memory ที่โหลดจาก seed ไม่มี SQL
+- กติกา `openapi.yaml`, `http-errors.ts`, migration และเทสต์กับ DB จริง ยังไม่มีผลบังคับ จนกว่าจะมี backend
+- ชั้น `interface/web` ห้ามมีกฎธุรกิจเหมือนชั้น interface เดิม
+
 ## ก่อนเริ่มทุกครั้ง
 1. อ่าน `docs/architecture/context-map.md` เพื่อดูว่ามี context อะไร แต่ละตัวเป็นเจ้าของตารางไหน และใช้ระดับ DDD แบบไหน (full / light / crud) ถ้ายังไม่มีไฟล์นี้ ให้สร้างจากโค้ดที่มีอยู่ แล้วให้ผู้ใช้ยืนยัน
 2. ตัดสินว่างานนี้อยู่ context ไหน ถ้าไม่ชัดหรือดูเหมือนต้องสร้าง context ใหม่ **ให้ถามผู้ใช้ก่อน** อย่าสร้าง context ใหม่เอง
@@ -19,7 +25,7 @@ src/
 │   ├── domain/            entity, value object, aggregate, repository interface, domain service, errors
 │   ├── application/       หนึ่งไฟล์ต่อหนึ่ง use case + ports.ts (สิ่งที่ต้องการจาก context อื่น)
 │   ├── infrastructure/    implement repository ด้วย SQL, เรียกระบบภายนอก
-│   ├── interface/http/    routes + mapper (domain ↔ JSON ตาม openapi.yaml)
+│   ├── interface/web/     React component + view model (ให้ตรงกับ mockup)
 │   ├── module.ts          ต่อสายชิ้นส่วนของ context นี้
 │   └── index.ts           สิ่งเดียวที่ context อื่น import ได้
 ├── shared/                domain-error, clock, db, http-errors (ของเทคนิคล้วน ห้ามมีกฎธุรกิจ)
@@ -29,14 +35,14 @@ src/
 
 ## กฎทิศทาง (ห้ามละเมิด)
 ```
-interface/http → application → domain ← infrastructure
+interface/web → application → domain ← infrastructure
 ```
 | ชั้น | import ได้ | ห้าม |
 |---|---|---|
 | domain | `shared/domain-error`, `shared/clock` (type) เท่านั้น | `pg`, `express`, ORM, ชั้นอื่น, context อื่น |
 | application | domain ของ context ตัวเอง, `shared/` | SQL, `req`/`res`, ไฟล์ข้างในของ context อื่น |
 | infrastructure | domain ของ context ตัวเอง, `shared/`, driver DB | กฎธุรกิจ |
-| interface/http | application, type/error จาก domain, `shared/` | SQL, กฎธุรกิจ |
+| interface/web | application, type/error จาก domain, `shared/` | SQL, กฎธุรกิจ |
 
 ข้าม context: import ได้เฉพาะจาก `modules/<other>/index.ts` หรือดีกว่านั้น ให้ application ประกาศ interface ใน `ports.ts` แล้วให้ `main.ts` ส่งของจริงเข้ามา
 
@@ -48,15 +54,15 @@ interface/http → application → domain ← infrastructure
 | กฎที่ต้องดูหลาย aggregate | domain: domain service |
 | โหลด → เรียก domain → บันทึก | application: use case |
 | มี SQL / HTTP client / อีเมล / ไฟล์ | infrastructure |
-| อ่าน req เขียน res, แปลง JSON, แปลง DomainError เป็น status | interface/http (+ `shared/http-errors.ts`) |
-| ตรวจรูปแบบ input (field ขาด, type ผิด) | interface/http |
+| แสดงผล, รับ event จากผู้ใช้, แปลง DomainError เป็นข้อความ | interface/web |
+| ตรวจรูปแบบ input (field ขาด, type ผิด) | interface/web |
 
 ## ลำดับการสร้าง use case ใหม่ (จากในออกนอก ใช้ TDD ทุกชั้น)
 1. **domain**: เขียนเทสต์ตาม AC เรื่องกฎ (`it('AC3: ...')`) ให้ fail → สร้าง/แก้ value object, entity, aggregate ให้ผ่าน
 2. **domain**: ประกาศหรือเพิ่มเมธอดใน repository interface
 3. **application**: ถ้าต้องใช้ข้อมูล context อื่น เพิ่ม interface ใน `ports.ts` → เขียนเทสต์ use case ด้วย fake repository + `fixedClock` → สร้างคลาส use case
 4. **infrastructure**: เขียนเทสต์กับ PostgreSQL จริง → implement repository, แปลง error ของ DB เป็น `DomainError` (เช่น `23505` → code ที่ตรง AC)
-5. **interface/http**: route + mapper ให้ตรง `openapi.yaml`, เพิ่ม error code ใน `shared/http-errors.ts`
+5. **interface/web**: React component ให้ตรงกับ mockup และเทสต์ด้วย Testing Library
 6. ต่อสายใน `module.ts` / `main.ts` แล้วเพิ่ม e2e ถ้า flow ข้าม context
 
 ## รูปแบบโค้ด

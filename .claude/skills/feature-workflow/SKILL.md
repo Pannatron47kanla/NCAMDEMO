@@ -68,7 +68,7 @@ skill นี้เป็นตัวคุมลำดับขั้น ถ้�
 |---|---|---|---|---|
 ข้อความ fail ต้องเป็นข้อความเต็มจากการรันจริง ไม่ใช่ผลที่ถูกย่อ (ดู "ประหยัด token" ใน AGENTS.md)
 
-โหลด skill `ddd-architecture` ก่อนเขียนโค้ด เพื่อวางไฟล์ให้ถูก context และถูกชั้น และสร้างจากในออกนอก (domain → application → infrastructure → interface/http)
+โหลด skill `ddd-architecture` ก่อนเขียนโค้ด เพื่อวางไฟล์ให้ถูก context และถูกชั้น และสร้างจากในออกนอก (domain → application → infrastructure → interface/web)
 
 วนต่อ AC ทีละข้อ:
 1. **Red**: เขียนเทสต์ชื่อ `AC<n>: ...` รันแล้วยืนยันว่า fail ด้วยเหตุผลที่ถูกต้อง (ใส่ข้อความ fail เต็มในรายงาน red/green)

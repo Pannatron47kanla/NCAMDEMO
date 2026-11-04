@@ -15,15 +15,19 @@ const rule = (patterns) => ({
 
 export default [
   {
-    files: ['src/modules/*/domain/**/*.ts'],
+    files: ['src/modules/*/domain/**/*.{ts,tsx}'],
     rules: rule([{
-      group: ['pg', 'express', 'typeorm', 'prisma', '@prisma/*', 'knex',
+      group: ['pg', 'express', 'typeorm', 'prisma', '@prisma/*', 'knex', 'react', 'react-dom',
               '**/application/**', '**/infrastructure/**', '**/interface/**'],
-      message: 'domain ห้าม import ชั้นอื่นหรือไลบรารี DB/HTTP',
+      message: 'domain ห้าม import ชั้นอื่น, ไลบรารี DB/HTTP หรือ React',
+    }, {
+      // รวม index.ts ของ context อื่นด้วย (เช่น ../../registry) ยกเว้น src/shared
+      regex: '^(\\.\\./){2,3}(?!shared(/|$))[^./]',
+      message: 'domain ห้าม import อะไรจาก context อื่น แม้ผ่าน index.ts',
     }]),
   },
   {
-    files: ['src/modules/*/application/**/*.ts'],
+    files: ['src/modules/*/application/**/*.{ts,tsx}'],
     rules: rule([{
       group: ['pg', 'express', 'typeorm', 'prisma', '@prisma/*', 'knex',
               '**/infrastructure/**', '**/interface/**'],
@@ -31,11 +35,21 @@ export default [
     }]),
   },
   {
-    files: ['src/modules/*/infrastructure/**/*.ts'],
+    files: ['src/modules/*/infrastructure/**/*.{ts,tsx}'],
     rules: rule([{ group: ['express', '**/interface/**'], message: 'infrastructure ห้ามรู้จัก HTTP' }]),
   },
   {
-    files: ['src/modules/*/interface/**/*.ts'],
+    // app-level views and main.tsx reach a context only through its index.ts
+    files: ['src/app/**/*.{ts,tsx}', 'src/main.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        group: ['**/modules/*/domain/**', '**/modules/*/application/**', '**/modules/*/infrastructure/**', '**/modules/*/interface/**', '**/modules/*/module'],
+        message: 'app ใช้ context อื่นผ่าน modules/<context>/index.ts เท่านั้น',
+      }] }],
+    },
+  },
+  {
+    files: ['src/modules/*/interface/**/*.{ts,tsx}'],
     rules: rule([{ group: ['pg', 'typeorm', 'prisma', '@prisma/*', 'knex', '**/infrastructure/**'],
                    message: 'interface ห้ามเขียน SQL หรือเรียก infrastructure ตรง ให้เรียกผ่าน use case' }]),
   },
