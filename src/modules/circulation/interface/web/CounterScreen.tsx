@@ -1,5 +1,5 @@
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
-import { diffDays, thd } from '../../../../shared/dates';
+import { addDays, diffDays, thd } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
 import { useStore } from '../../../../shared/web/useStore';
 import type { Asset } from '../../../registry';
@@ -40,7 +40,7 @@ function modeStyle(on: boolean): CSSProperties {
 interface Chip { code: string; sub: string }
 
 // Counter screen, ported from mockup lines 510-549 (shared frame) and 551-605 (borrow panel).
-export function CounterScreen({ circulation, assets, now, returnPanel, aside }: CounterScreenProps) {
+export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPanel, aside }: CounterScreenProps) {
   const counter = circulation.counter;
   const c = useStore(counter.state);
   const borrowers = useStore(circulation.borrowers);
@@ -84,7 +84,7 @@ export function CounterScreen({ circulation, assets, now, returnPanel, aside }: 
     blocked: c.blocked,
     cartCount: c.cart.length,
     partsOk: c.cart.length > 0 && c.cart.every((it) => it.parts.every((p) => p.checked)),
-    loanDone: false,
+    loanDone: !!c.done,
     returnChosen: false,
     returnDone: false,
   });
@@ -139,10 +139,14 @@ export function CounterScreen({ circulation, assets, now, returnPanel, aside }: 
             {c.msg ? <div role="status" style={{ padding: '10px 12px', borderRadius: 6, fontWeight: 500, ...MSG_COLORS[c.msg.kind] }}>{messageText(c.msg.code, c.msg.params)}</div> : null}
           </section>
           {isBorrow
-            ? <>
-              <BorrowPanel state={c} borrower={borrower} held={borrower ? borrower.kitsHeld(loans) : 0} maxSets={settings.maxSets} overdue={overdue} assets={assets} onRemove={(id) => counter.removeFromCart(id)} />
-              {c.blocked ? <div><button className="btn" onClick={() => counter.reset()}>รายการใหม่ (สแกนผู้ยืมคนถัดไป)</button></div> : null}
-            </>
+            ? (
+              <BorrowPanel
+                state={c} borrower={borrower} held={borrower ? borrower.kitsHeld(loans) : 0} maxSets={settings.maxSets} overdue={overdue} assets={assets}
+                loanDays={settings.loanDays} needApproval={settings.needApproval} dueDate={addDays(now, settings.loanDays)}
+                onRemove={(id) => counter.removeFromCart(id)} onTogglePart={(id, i) => counter.togglePart(id, i)}
+                onConfirm={() => counter.confirmBorrow()} onReset={() => counter.reset()} onPrintSlip={onPrintSlip}
+              />
+            )
             : (returnPanel ?? <div className="card" style={{ padding: 20, color: '#46565c' }}>สแกนป้าย QR ของครุภัณฑ์ที่นำมาคืน ระบบจะค้นใบยืมให้เอง</div>)}
         </div>
         {aside}

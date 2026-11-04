@@ -1,4 +1,5 @@
 import type { Clock } from '../../../shared/clock';
+import { th } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
 import { cartItemFor, isInCart, type CartItem } from '../domain/cart';
@@ -21,6 +22,8 @@ export interface CounterState {
   blocked: boolean;
   cart: CartItem[];
   msg: CounterMessage | null;
+  /** The loan just saved, until the officer starts a new one. */
+  done: { loanId: string; due: Date; pending: boolean; count: number } | null;
 }
 
 export interface CounterDeps {
@@ -31,7 +34,7 @@ export interface CounterDeps {
 }
 
 export function initialCounterState(): CounterState {
-  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null };
+  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, done: null };
 }
 
 /** The เคาน์เตอร์ยืม-คืน: one scan box that first takes the borrower, then assets. */
@@ -47,7 +50,7 @@ export class CounterService {
   /** Borrow keeps the borrower and cart. Return starts clean (mockup setBorrow / setReturn). */
   setMode(mode: CounterState['mode']): void {
     if (mode === 'borrow') this.patch({ mode, msg: null, scan: '' });
-    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [] });
+    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [], done: null });
   }
 
   removeFromCart(assetId: string): void {
@@ -55,9 +58,37 @@ export class CounterService {
     this.patch({ cart: this.state.get().cart.filter((it) => it.assetId !== assetId), msg: { kind: 'warn', code: 'ITEM_REMOVED', params: { name } } });
   }
 
+  togglePart(assetId: string, partIndex: number): void {
+    this.patch({
+      cart: this.state.get().cart.map((it) => (it.assetId !== assetId ? it : {
+        ...it, parts: it.parts.map((p, i) => (i === partIndex ? { ...p, checked: !p.checked } : p)),
+      })),
+    });
+  }
+
+  /** Turns the cart into a loan. Does nothing without a borrower, a cart, or when blocked (so a second press adds nothing). */
+  confirmBorrow(): void {
+    const c = this.state.get();
+    const borrower = this.deps.borrowers.findByCode(c.borrowerCode);
+    if (!borrower || c.blocked || !c.cart.length) return;
+    const now = this.clock.now();
+    const settings = this.deps.settings.get();
+    const loan = borrower.borrow(c.cart, settings, now, this.deps.loans.nextId());
+    this.deps.loans.add(loan);
+    for (const it of c.cart) {
+      this.deps.assets.setStatus(it.assetId, 'ถูกยืม');
+      this.deps.assets.addEvent(it.assetId, { date: th(now, 0), text: 'ยืมโดย ' + borrower.name + ' กำหนดคืน ' + th(now, settings.loanDays), doc: loan.id });
+    }
+    this.patch({
+      cart: [],
+      done: { loanId: loan.id, due: loan.due, pending: loan.pending, count: loan.items.length },
+      msg: { kind: 'ok', code: 'LOAN_SAVED' },
+    });
+  }
+
   /** Clears the borrower and cart for the next person. */
   reset(): void {
-    this.patch({ scan: '', borrowerCode: '', blocked: false, cart: [], msg: null });
+    this.patch({ scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, done: null });
   }
 
   /** Handles one scan. Rules that refuse it throw a DomainError; the message is also left in `state`. */
@@ -70,6 +101,7 @@ export class CounterService {
     // Return mode is handled by the return side of the counter.
     if (this.state.get().mode !== 'borrow') return;
     const c = this.state.get();
+    if (c.done) return this.refuse('LOAN_ALREADY_SAVED');
     if (!c.borrowerCode) {
       const borrower = this.deps.borrowers.findByCode(code);
       if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code });

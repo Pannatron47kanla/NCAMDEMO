@@ -104,4 +104,36 @@ describe('counter screen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('เกินจำนวนสูงสุด 2 ชุดต่อนักศึกษา (มีในรายการ/ถืออยู่แล้ว 2 ชุด)');
     expect(screen.getByText('2 รายการ')).toBeInTheDocument();
   });
+
+  it('AC13: the cart shows the due date and loan days, unticking a part is saved as a note, and confirm shows the receipt', async () => {
+    const { user, registry, circulation, onPrintSlip } = show();
+    const a = registry.catalog.findById('A1')!;
+    await user.click(screen.getByRole('button', { name: /6611010015/ }));
+    expect(screen.queryByRole('button', { name: 'ยืนยันการยืม' })).not.toBeInTheDocument();
+    await user.type(screen.getByRole('textbox'), `${a.code}{Enter}`);
+    expect(screen.getByText('4 พ.ย. 69', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByText('ตามกติกา ยืมได้ 7 วัน')).toBeInTheDocument();
+    expect(screen.getByText('ตรวจชิ้นส่วนก่อนจ่าย')).toBeInTheDocument();
+    const first = a.parts[0]!;
+    await user.click(screen.getByRole('checkbox', { name: `${first.name} × ${first.qty}` }));
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการยืม' }));
+    expect(screen.getByText('บันทึกการยืมแล้ว', { selector: 'div[style*="font-size: 18px"]' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('บันทึกการยืมแล้ว');
+    expect(screen.getByText(/เลขที่ใบยืม/)).toHaveTextContent('เลขที่ใบยืม L-2569-0413 · 1 รายการ · กำหนดคืน 4 พ.ย. 69');
+    expect(circulation.loans.get()[1]!.items[0]!.note).toBe('จ่ายไม่ครบ: ไม่มี ' + first.name);
+    await user.click(screen.getByRole('button', { name: 'พิมพ์ใบยืม' }));
+    expect(onPrintSlip).toHaveBeenCalledWith('L-2569-0413');
+    await user.type(screen.getByRole('textbox'), 'T0007{Enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('รายการนี้บันทึกแล้ว กด "รายการใหม่" เพื่อเริ่มผู้ยืมคนถัดไป');
+    await user.click(screen.getAllByRole('button', { name: 'รายการใหม่' })[0]!);
+    expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
+  });
+
+  it('AC13: clearing the list resets the counter for the next borrower', async () => {
+    const { user, registry } = show();
+    await user.click(screen.getByRole('button', { name: /T0007/ }));
+    await user.type(screen.getByRole('textbox'), `${registry.catalog.findById('A5')!.code}{Enter}`);
+    await user.click(screen.getByRole('button', { name: 'ล้างรายการ' }));
+    expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
+  });
 });

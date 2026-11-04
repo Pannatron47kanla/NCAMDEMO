@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays } from '../../../../shared/dates';
+import { addDays, th } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
 import { Loan } from '../../domain/loan';
 import { setup } from './helpers';
@@ -149,5 +149,75 @@ describe('student kit limit', () => {
     counter.scan('T0007');
     for (const id of ['A1', 'A7', 'A3']) counter.scan(codeOf(registry, id));
     expect(state().cart).toHaveLength(3);
+  });
+});
+
+describe('confirm borrow', () => {
+  function readyToConfirm() {
+    const ctx = setup();
+    const { counter, registry } = ctx;
+    counter.scan('6611010015');
+    counter.scan(registry.catalog.findById('A1')!.code);
+    counter.scan(registry.catalog.findById('A5')!.code);
+    return ctx;
+  }
+
+  it('AC13: confirming creates a loan due in 7 days, marks assets ถูกยืม and adds a history line', () => {
+    const { counter, circulation, registry, clock, state } = readyToConfirm();
+    const now = clock.now();
+    counter.confirmBorrow();
+    const loans = circulation.loans.get();
+    expect(loans).toHaveLength(2);
+    const loan = loans[1]!;
+    expect(loan.id).toBe('L-2569-0413');
+    expect(loan.borrowerCode).toBe('6611010015');
+    expect(loan.startedAt).toEqual(now);
+    expect(loan.due).toEqual(addDays(now, 7));
+    expect(loan.items.map((i) => i.assetId)).toEqual(['A1', 'A5']);
+    for (const id of ['A1', 'A5']) {
+      const a = registry.catalog.findById(id)!;
+      expect(a.status).toBe('ถูกยืม');
+      expect(a.events.at(-1)).toEqual({ date: th(now, 0), text: 'ยืมโดย นางสาวพิมพ์ชนก ศรีสุข กำหนดคืน ' + th(now, 7), doc: 'L-2569-0413' });
+    }
+    expect(state().cart).toEqual([]);
+    expect(state().done).toMatchObject({ loanId: 'L-2569-0413', due: addDays(now, 7), pending: false, count: 2 });
+    expect(state().msg).toEqual({ kind: 'ok', code: 'LOAN_SAVED' });
+  });
+
+  it('AC13: an unchecked part is noted as จ่ายไม่ครบ and the other item as ครบทุกชิ้น', () => {
+    const { counter, circulation, registry } = readyToConfirm();
+    const missing = registry.catalog.findById('A1')!.parts[1]!.name;
+    counter.togglePart('A1', 1);
+    counter.confirmBorrow();
+    const items = circulation.loans.get()[1]!.items;
+    expect(items.map((i) => i.note)).toEqual(['จ่ายไม่ครบ: ไม่มี ' + missing, 'ครบทุกชิ้น']);
+    expect(items.map((i) => i.kit)).toEqual([true, false]);
+  });
+
+  it('AC13: confirming twice creates only one loan and one history line', () => {
+    const { counter, circulation, registry } = readyToConfirm();
+    counter.confirmBorrow();
+    counter.confirmBorrow();
+    expect(circulation.loans.get()).toHaveLength(2);
+    expect(registry.catalog.findById('A1')!.events.filter((e) => e.doc === 'L-2569-0413')).toHaveLength(1);
+  });
+
+  it('AC13: confirming with an empty cart or a blocked borrower does nothing', () => {
+    const { counter, circulation } = setup();
+    counter.scan('T0007');
+    counter.confirmBorrow();
+    refusal(() => counter.scan('6511010088'));
+    counter.reset();
+    expect(circulation.loans.get()).toHaveLength(1);
+  });
+
+  it('AC13: after saving, a new scan is refused with LOAN_ALREADY_SAVED until the counter is reset', () => {
+    const { counter, state } = readyToConfirm();
+    counter.confirmBorrow();
+    expect(refusal(() => counter.scan('T0007')).code).toBe('LOAN_ALREADY_SAVED');
+    counter.reset();
+    expect(state().done).toBeNull();
+    counter.scan('T0007');
+    expect(state().borrowerCode).toBe('T0007');
   });
 });

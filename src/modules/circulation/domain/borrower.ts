@@ -1,7 +1,8 @@
+import { addDays } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import type { CartItem, LendableAsset } from './cart';
 import type { LoanSettings } from './loan-settings';
-import type { Loan } from './loan';
+import { Loan } from './loan';
 
 export type BorrowerType = 'นักศึกษา' | 'อาจารย์';
 
@@ -44,5 +45,20 @@ export class Borrower {
       const held = this.kitsHeld(loans) + cart.filter((it) => it.parts.length).length;
       if (held >= settings.maxSets) throw new DomainError('KIT_LIMIT_REACHED', { max: settings.maxSets, held });
     }
+  }
+
+  /** Hands the cart over as one loan due `loanDays` from today. */
+  borrow(cart: readonly CartItem[], settings: LoanSettings, now: Date, loanId: string): Loan {
+    return Loan.start({
+      id: loanId,
+      borrowerCode: this.code,
+      items: cart.map((it) => {
+        const missing = it.parts.filter((p) => !p.checked).map((p) => p.name);
+        return { assetId: it.assetId, returned: false, kit: it.parts.length > 0, note: missing.length ? 'จ่ายไม่ครบ: ไม่มี ' + missing.join(', ') : 'ครบทุกชิ้น' };
+      }),
+      start: addDays(now, 0),
+      due: addDays(now, settings.loanDays),
+      pending: false,
+    });
   }
 }
