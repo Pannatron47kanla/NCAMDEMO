@@ -124,3 +124,28 @@ describe('closing the auction notice', () => {
     expect(effect.lines[0]!.date).toEqual(c.data.plan.ann);
   });
 });
+
+describe('a round with no bid', () => {
+  it('AC36: noBid raises the round by 1, opens the notice again and keeps the minimum prices', () => {
+    const c = atStep3();
+    c.announce({ A16: '5000', A17: '12000' });
+    c.noBid();
+    expect(c.data.round).toBe(2);
+    expect(c.data.announced).toBe(false);
+    expect(c.data.minP).toEqual({ A16: 5000, A17: 12000 });
+  });
+
+  it('AC36: noBid clears the sale data', () => {
+    const c = atStep3();
+    c.announce({ A16: '5000', A17: '12000' });
+    c.noBid();
+    expect([c.data.soldP, c.data.buyer, c.data.receipt]).toEqual([{}, '', '']);
+  });
+
+  it('AC36: the next announcement is round 2', () => {
+    const c = atStep3();
+    c.announce({ A16: '5000', A17: '12000' });
+    c.noBid();
+    expect(c.announce({ A16: '4000', A17: '9000' }).lines[0]!.text).toBe('ปิดประกาศขายทอดตลาด ครั้งที่ 2 ราคาขั้นต่ำ 4,000 บาท');
+  });
+});

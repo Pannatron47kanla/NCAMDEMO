@@ -147,4 +147,12 @@ export class DisposalCase {
     this.state = { ...s, minP: min, announced: true };
     return { lines: this.lines(s.plan.ann, (id) => 'ปิดประกาศขายทอดตลาด ครั้งที่ ' + s.round + ' ราคาขั้นต่ำ ' + baht(min[id]!)) };
   }
+
+  /**
+   * No bid reached the minimum price (mockup noBid, line 2098): the round goes up by 1, the notice is open again
+   * and the sale data is cleared. The minimum prices stay for the next round.
+   */
+  noBid(): void {
+    this.state = { ...this.state, round: this.state.round + 1, announced: false, soldP: {}, buyer: '', receipt: '' };
+  }
 }

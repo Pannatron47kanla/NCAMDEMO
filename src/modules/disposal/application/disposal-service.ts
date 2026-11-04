@@ -146,4 +146,11 @@ export class DisposalService {
   }
 
   announce(): void { this.step((c) => c.announce(this.desk.get().draft.minP)); }
+
+  /** Records that no bid reached the minimum. The forms for the sale are emptied, and a notice names the new round. */
+  noBid(): void {
+    let round = 0;
+    const done = this.step((c) => { c.noBid(); round = c.data.round; });
+    if (done) this.desk.set((d) => ({ ...d, draft: { ...d.draft, soldP: {}, buyer: '', receipt: '' }, note: { code: 'NO_BID_RECORDED', params: { round } } }));
+  }
 }

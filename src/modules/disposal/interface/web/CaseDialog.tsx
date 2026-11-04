@@ -36,6 +36,7 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
   const note = desk.note;
   const isAuction = current?.data.method === 'auction';
   const dates = current ? current.dates : null;
+  const canSold = !!current && METHODS[current.data.method].sale && (!isAuction || current.data.announced);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15, 30, 36, 0.48)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', boxSizing: 'border-box' }}>
@@ -154,6 +155,16 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       <button className="btn pri" onClick={() => svc.announce()}>ปิดประกาศขายทอดตลาด</button>
                       <button className="btn" onClick={() => onPrint('auction')}>ดูร่างประกาศ</button>
+                    </div>
+                  )}
+                  {canSold && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {isAuction && (
+                        <>
+                          <button className="btn" onClick={() => onPrint('auction')}>ดูประกาศ</button>
+                          <button className="btn warn" onClick={() => svc.noBid()}>ไม่มีผู้เสนอราคาถึงขั้นต่ำ (A2)</button>
+                        </>
+                      )}
                     </div>
                   )}
                 </>

@@ -112,3 +112,21 @@ describe('closing the auction notice', () => {
     expect(asset('A16').events.at(-1)).toEqual({ date: '11 พ.ย. 69', text: 'ปิดประกาศขายทอดตลาด ครั้งที่ 1 ราคาขั้นต่ำ 5,000 บาท', doc: 'DS-2569-001' });
   });
 });
+
+describe('a round with no bid', () => {
+  it('AC36: noBid shows the notice for the next round, reopens the notice and empties the sale forms', () => {
+    const t = setup();
+    t.svc.createCase();
+    t.svc.recordFact();
+    t.svc.approve();
+    t.svc.setMinPrice('A16', '5000');
+    t.svc.setMinPrice('A17', '12000');
+    t.svc.announce();
+    t.svc.noBid();
+    const c = t.disposal.current.get()!;
+    expect([c.data.round, c.data.announced]).toEqual([2, false]);
+    expect(t.svc.desk.get().note).toEqual({ code: 'NO_BID_RECORDED', params: { round: 2 } });
+    expect(t.svc.desk.get().draft.soldP).toEqual({});
+    expect(t.svc.desk.get().draft.minP).toEqual({ A16: '5000', A17: '12000' });
+  });
+});
