@@ -1,10 +1,12 @@
 import type { Clock } from '../shared/clock';
+import { createCirculationModule, type CirculationModule } from '../modules/circulation';
 import { createRegistryModule, type RegistryModule } from '../modules/registry';
 
 /** Every context, built from the seed and wired together. */
 export interface AppModules {
   clock: Clock;
   registry: RegistryModule;
+  circulation: CirculationModule;
 }
 
 /**
@@ -17,5 +19,6 @@ export interface AppModules {
  */
 export function createAppModules(clock: Clock): AppModules {
   const registry = createRegistryModule();
-  return { clock, registry };
+  const circulation = createCirculationModule(clock, { assets: registry.catalog });
+  return { clock, registry, circulation };
 }

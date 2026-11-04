@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AssetScreen } from './AssetScreen';
+import { CounterScreen } from './CounterScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import type { AppModules } from './modules';
 import type { ScreenKey, ScreenParams } from './navigation';
@@ -20,4 +21,5 @@ export type ScreenRenderer = (ctx: ScreenContext) => ReactNode;
 export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   dash: () => <DashboardScreen />,
   asset: (ctx) => <AssetScreen {...ctx} />,
+  counter: (ctx) => <CounterScreen {...ctx} />,
 };
