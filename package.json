@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run && npm run test:tz",
-    "test:tz": "cross-env TZ=America/New_York vitest run --passWithNoTests src/shared src/modules && cross-env TZ=UTC vitest run --passWithNoTests src/shared src/modules",
+    "test:tz": "cross-env TZ=America/New_York vitest run src/shared src/modules && cross-env TZ=UTC vitest run src/shared src/modules",
     "lint": "eslint .",
     "e2e": "playwright test"
   },
