@@ -1,4 +1,5 @@
 import type { Clock } from '../../../shared/clock';
+import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
 import type { CartItem } from '../domain/cart';
 import type { BorrowerRepository, LoanRepository } from '../domain/repositories';
@@ -64,7 +65,14 @@ export class CounterService {
     // Return mode is handled by the return side of the counter.
     if (this.state.get().mode !== 'borrow') return;
     const borrower = this.deps.borrowers.findByCode(code);
-    if (borrower) this.patch({ scan: '', borrowerCode: borrower.code, blocked: false, msg: { kind: 'ok', code: 'BORROWER_OK' } });
+    if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code });
+    this.patch({ scan: '', borrowerCode: borrower.code, blocked: false, msg: { kind: 'ok', code: 'BORROWER_OK' } });
+  }
+
+  /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */
+  private refuse(code: string, params?: Record<string, string | number>): never {
+    this.patch({ scan: '', msg: params ? { kind: 'err', code, params } : { kind: 'err', code } });
+    throw new DomainError(code, params);
   }
 
   private patch(change: Partial<CounterState>): void {

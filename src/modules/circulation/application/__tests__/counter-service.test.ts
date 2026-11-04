@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DomainError } from '../../../../shared/domain-error';
 import { setup } from './helpers';
 
 describe('counter scan box', () => {
@@ -17,5 +18,18 @@ describe('counter scan box', () => {
     expect(state().borrowerCode).toBe('T0007');
     expect(state().blocked).toBe(false);
     expect(state().msg).toEqual({ kind: 'ok', code: 'BORROWER_OK' });
+  });
+});
+
+describe('counter borrower check', () => {
+  it('AC7: an unknown borrower code throws BORROWER_NOT_FOUND with the code and leaves the message in state', () => {
+    const { counter, state } = setup();
+    let error: unknown;
+    try { counter.scan('9999999999'); } catch (e) { error = e; }
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({ code: 'BORROWER_NOT_FOUND', params: { code: '9999999999' } });
+    expect(state().msg).toEqual({ kind: 'err', code: 'BORROWER_NOT_FOUND', params: { code: '9999999999' } });
+    expect(state().scan).toBe('');
+    expect(state().borrowerCode).toBe('');
   });
 });

@@ -44,4 +44,10 @@ describe('counter screen', () => {
     await user.click(screen.getByRole('button', { name: 'ยืม' }));
     expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
   });
+
+  it('AC7: an unknown borrower code shows the Thai error text', async () => {
+    const { user } = show();
+    await user.type(screen.getByRole('textbox'), '9999999999{Enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('ไม่พบรหัสผู้ยืม 9999999999 ในทะเบียนผู้ยืม');
+  });
 });
