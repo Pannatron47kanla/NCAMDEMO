@@ -67,3 +67,14 @@ describe('counter overdue block', () => {
     expect(state().blocked).toBe(false);
   });
 });
+
+describe('counter asset lookup', () => {
+  it('AC9: an unknown asset code throws ASSET_NOT_FOUND with the code', () => {
+    const { counter, state } = setup();
+    counter.scan('T0007');
+    const error = refusal(() => counter.scan('9999-999-9999'));
+    expect(error).toMatchObject({ code: 'ASSET_NOT_FOUND', params: { code: '9999-999-9999' } });
+    expect(state().msg).toEqual({ kind: 'err', code: 'ASSET_NOT_FOUND', params: { code: '9999-999-9999' } });
+    expect(state().cart).toEqual([]);
+  });
+});

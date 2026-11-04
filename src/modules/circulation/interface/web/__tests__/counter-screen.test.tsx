@@ -63,4 +63,11 @@ describe('counter screen', () => {
     await user.click(screen.getByRole('button', { name: 'รายการใหม่ (สแกนผู้ยืมคนถัดไป)' }));
     expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
   });
+
+  it('AC9: an unknown asset code shows the Thai error text', async () => {
+    const { user } = show();
+    await user.click(screen.getByRole('button', { name: /T0007/ }));
+    await user.type(screen.getByRole('textbox'), '9999-999-9999{Enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('ไม่พบรหัสครุภัณฑ์ 9999-999-9999');
+  });
 });

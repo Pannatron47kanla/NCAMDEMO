@@ -77,7 +77,9 @@ export class CounterService {
       this.patch({ scan: '', borrowerCode: borrower.code, blocked: false, msg: { kind: 'ok', code: 'BORROWER_OK' } });
       return;
     }
-    if (c.blocked) this.refuse('BORROWER_BLOCKED');
+    if (c.blocked) return this.refuse('BORROWER_BLOCKED');
+    const asset = this.deps.assets.findByCode(code);
+    if (!asset) return this.refuse('ASSET_NOT_FOUND', { code });
   }
 
   /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */
