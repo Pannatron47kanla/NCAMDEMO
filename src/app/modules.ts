@@ -20,7 +20,7 @@ export interface AppModules {
  * contexts that others depend on first (registry, then maintenance, then circulation).
  */
 export function createAppModules(clock: Clock): AppModules {
-  const registry = createRegistryModule();
+  const registry = createRegistryModule(clock);
   const maintenance = createMaintenanceModule(clock, { assets: registry.catalog });
   const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: maintenance.repairs });
   return { clock, registry, maintenance, circulation };
