@@ -19,6 +19,11 @@ describe('report cards', () => {
     expect(card(m, 'register').note).toBe(m.registry.assets.get().length + ' รายการ');
   });
 
+  it('AC44: the end-of-life card counts every asset due within 12 months (6 on the demo date, not the dashboard 4)', () => {
+    const m = createAppModules(fixedClock(NOW));
+    expect(card(m, 'disposal').note).toBe('6 รายการ');
+  });
+
   it('AC44: the audit card counts confirmed results', () => {
     const m = createAppModules(fixedClock(NOW));
     expect(card(m, 'audit').note).toBe('ยืนยันแล้ว 3 รายการ');

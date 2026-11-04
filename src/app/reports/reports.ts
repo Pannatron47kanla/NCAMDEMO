@@ -24,7 +24,8 @@ export interface ReportSources {
 export function buildReports(src: ReportSources, now: Date): ReportCard[] {
   const live = src.assets.filter((a) => a.status !== 'จำหน่ายแล้ว');
   const infoOf = (a: Asset) => assetInfo(a, now);
-  const dispList = live.filter((a) => { const b = infoOf(a).bucket; return b === 'เกินอายุใช้งาน' || b === 'ครบภายใน 6 เดือน'; });
+  // The mockup declares `dispList` twice in renderVals. The card note uses the later one (line 2581): every asset with an end-of-life date.
+  const dispList = live.filter((a) => infoOf(a).disp);
   const dc = src.current;
   const rc = resultCase(src.current, src.done);
   const auctionReady = !!dc && dc.data.method === 'auction' && dc.data.step >= 3;
