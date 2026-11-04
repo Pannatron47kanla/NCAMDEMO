@@ -37,3 +37,17 @@ describe('audit round: offline results', () => {
     expect(out.round.res.A2!.confirmed).toBe(false);
   });
 });
+
+describe('audit round: confirmed results', () => {
+  it('AC32: setResult on a confirmed row changes nothing', () => {
+    const r = newAuditRound();
+    expect(setResult(r, 'A8', 'ไม่พบ')).toBe(r);
+  });
+
+  it('AC32: confirm lists ไม่พบ so the caller can mark the asset lost, then locks the row', () => {
+    const out = confirm(setResult(newAuditRound(), 'A1', 'ไม่พบ'));
+    expect(out.applied).toEqual([{ id: 'A1', r: 'ไม่พบ' }]);
+    expect(setResult(out.round, 'A1', 'พบ')).toBe(out.round);
+    expect(confirm(out.round).applied).toEqual([]);
+  });
+});

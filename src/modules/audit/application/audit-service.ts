@@ -1,7 +1,8 @@
 import type { Clock } from '../../../shared/clock';
+import { th } from '../../../shared/dates';
 import { createStore, type Store } from '../../../shared/store';
 import {
-  confirm, newAuditRound, scanUnknown, setResult, sync, toggleOffline,
+  NOT_FOUND, confirm, newAuditRound, scanUnknown, setResult, sync, toggleOffline,
   type AuditRound,
 } from '../domain/round';
 import type { AssetsPort } from './ports';
@@ -17,10 +18,17 @@ export class AuditService {
   sync(): void { this.round.set(sync); }
   scanUnknown(): void { this.round.set(scanUnknown); }
 
-  /** Confirms every synced result. */
+  /**
+   * Confirms every synced result. A confirmed ไม่พบ makes the asset สูญหาย / ไม่พบ, and every confirmed
+   * result adds a history line to the asset.
+   */
   confirm(): void {
-    void this.clock;
-    void this.assets;
-    this.round.set((s) => confirm(s).round);
+    const { round, applied } = confirm(this.round.get());
+    this.round.set(round);
+    const date = th(this.clock.now(), 0);
+    applied.forEach(({ id, r }) => {
+      if (r === NOT_FOUND) this.assets.setStatus(id, 'สูญหาย / ไม่พบ');
+      this.assets.addEvent(id, { date, text: 'ตรวจสอบพัสดุประจำปี 2569: ' + r, doc: 'รอบตรวจ 2569' });
+    });
   }
 }
