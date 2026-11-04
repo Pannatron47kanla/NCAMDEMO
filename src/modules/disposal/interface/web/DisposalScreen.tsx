@@ -172,6 +172,29 @@ export function DisposalScreen({ disposal, assets, now, onPrint }: DisposalScree
           </div>
         </nav>
       </section>
+      {done.length > 0 && (
+        <section className="card" style={{ overflowX: 'auto' }}>
+          <div style={{ padding: '12px 12px 4px' }}><h2 className="h3">ประวัติเรื่องจำหน่าย</h2></div>
+          <table className="t">
+            <thead><tr><th>เลขเรื่อง</th><th>รายการ</th><th>วิธี</th><th>เงินที่ได้</th><th>ลงจ่าย</th><th>แจ้ง สตง.</th></tr></thead>
+            <tbody>
+              {done.slice().reverse().map((c) => {
+                const m = METHODS[c.data.method];
+                return (
+                  <tr key={c.data.id}>
+                    <td className="mono">{c.data.id}</td>
+                    <td>{c.data.ids.map((id) => assets.find((a) => a.id === id)?.name ?? id).join(', ')}</td>
+                    <td>{m.label}</td>
+                    <td>{m.sale ? baht(c.data.ids.reduce((t, id) => t + (c.data.soldP[id] ?? 0), 0)) : '-'}</td>
+                    <td>{thd(c.dates.writeoff)}</td>
+                    <td>{c.data.oag}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
       {desk.modal && <CaseDialog disposal={disposal} assets={assets} now={now} stageDates={stageDates} onPrint={onPrint} />}
     </>
   );

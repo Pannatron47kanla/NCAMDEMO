@@ -196,4 +196,23 @@ export class DisposalCase {
         : method.label + ': ' + party + ' · ' + ref),
     };
   }
+
+  /** Step 5: writes the assets off the register (mockup writeOffCase, line 2115). They become จำหน่ายแล้ว. Moves to step 5. */
+  writeOff(): CaseEffect {
+    this.state = { ...this.state, step: 5 };
+    return { status: 'จำหน่ายแล้ว', lines: this.lines(this.dates.writeoff, () => 'ลงจ่ายออกจากทะเบียนครุภัณฑ์ (ข้อ 218)') };
+  }
+
+  /** Step 6: tells the State Audit Office (mockup notifyOag, line 2120). A blank letter number throws LETTER_REQUIRED. */
+  notifyAuditor(letterNo: string): CaseEffect {
+    const letter = letterNo.trim();
+    if (!letter) throw new DomainError('LETTER_REQUIRED');
+    this.state = { ...this.state, step: 6, oag: letter };
+    return { lines: this.lines(this.dates.oagSent, () => 'แจ้งสำนักงานการตรวจเงินแผ่นดิน หนังสือที่ ' + letter) };
+  }
+
+  /** Closes the finished case so a new one can start (mockup closeCase, line 2126). */
+  close(): void {
+    this.state = { ...this.state, closed: true };
+  }
 }

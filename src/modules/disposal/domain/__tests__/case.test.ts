@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DomainError } from '../../../../shared/domain-error';
+import { auctionPlan, casePlan, caseDates } from '../plan';
 import { DisposalCase, type Candidate } from '../case';
 
 const TODAY = new Date(2026, 9, 28);
@@ -222,5 +223,85 @@ describe('recording the result', () => {
     expect(c.data.step).toBe(4);
     expect(effect.lines[0]!.text).toBe('โอน: วิทยาลัยพยาบาล · หนังสือ 5/2569');
     expect(effect.lines[0]!.date).toEqual(c.dates.done);
+  });
+});
+
+describe('the plan dates', () => {
+  it('AC38: the plan follows the working-day rules from today (28 ต.ค. 2569)', () => {
+    const p = casePlan(TODAY);
+    expect(p.created).toEqual(TODAY);
+    expect(p.fact).toEqual(new Date(2026, 10, 4));
+    expect(p.approve).toEqual(new Date(2026, 10, 9));
+    expect(p.ann).toEqual(new Date(2026, 10, 11));
+    expect(p.viewTo).toEqual(new Date(2026, 10, 26));
+    expect(p.sale).toEqual(new Date(2026, 10, 27));
+  });
+
+  it('AC38: the deadline is 60 days after approval', () => {
+    const p = casePlan(TODAY);
+    expect(p.deadline).toEqual(new Date(2027, 0, 8));
+  });
+
+  it('AC38: an auction is done on the sale day and any other method 5 working days after approval', () => {
+    const p = casePlan(TODAY);
+    expect(caseDates(p, 'auction').done).toEqual(p.sale);
+    expect(caseDates(p, 'transfer').done).toEqual(new Date(2026, 10, 16));
+  });
+
+  it('AC38: the write-off is the next working day, the notice is due 30 working days later and sent after 5', () => {
+    const d = caseDates(casePlan(TODAY), 'auction');
+    expect(d.writeoff).toEqual(new Date(2026, 10, 30));
+    expect(d.oagDue).toEqual(new Date(2027, 0, 15));
+    expect(d.oagSent).toEqual(new Date(2026, 11, 8));
+  });
+
+  it('AC38: the older auction plan announces 7 working days on, shows 15 days, sells the next working day and reports after 30', () => {
+    const p = auctionPlan(TODAY);
+    expect(p.ann).toEqual(new Date(2026, 10, 6));
+    expect(p.viewFrom).toEqual(p.ann);
+    expect(p.viewTo).toEqual(new Date(2026, 10, 21));
+    expect(p.day).toEqual(new Date(2026, 10, 23));
+  });
+});
+
+function sold(): DisposalCase {
+  const c = announced();
+  c.recordResult(sale);
+  return c;
+}
+
+describe('completing the case', () => {
+  it('AC38: write-off makes every asset จำหน่ายแล้ว, with a history line on the write-off date', () => {
+    const c = sold();
+    const effect = c.writeOff();
+    expect(c.data.step).toBe(5);
+    expect(effect.status).toBe('จำหน่ายแล้ว');
+    expect(effect.lines.map((l) => [l.assetId, l.text])).toEqual([['A16', 'ลงจ่ายออกจากทะเบียนครุภัณฑ์ (ข้อ 218)'], ['A17', 'ลงจ่ายออกจากทะเบียนครุภัณฑ์ (ข้อ 218)']]);
+    expect(effect.lines[0]!.date).toEqual(c.dates.writeoff);
+  });
+
+  it('AC38: a blank letter number throws LETTER_REQUIRED and the case stays at step 5', () => {
+    const c = sold();
+    c.writeOff();
+    expect(codeOf(() => c.notifyAuditor('   '))).toBe('LETTER_REQUIRED');
+    expect(c.data.step).toBe(5);
+  });
+
+  it('AC38: notifying the State Audit Office logs the trimmed letter number and moves to step 6', () => {
+    const c = sold();
+    c.writeOff();
+    const effect = c.notifyAuditor(' 12/2569 ');
+    expect(c.data.step).toBe(6);
+    expect(c.data.oag).toBe('12/2569');
+    expect(effect.lines[0]!.text).toBe('แจ้งสำนักงานการตรวจเงินแผ่นดิน หนังสือที่ 12/2569');
+    expect(effect.lines[0]!.date).toEqual(c.dates.oagSent);
+  });
+
+  it('AC38: close marks the case closed', () => {
+    const c = sold();
+    c.writeOff();
+    c.notifyAuditor('12/2569');
+    c.close();
+    expect(c.data.closed).toBe(true);
   });
 });

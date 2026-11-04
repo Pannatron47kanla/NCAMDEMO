@@ -2,6 +2,7 @@ import type { Clock } from '../../../shared/clock';
 import { DomainError } from '../../../shared/domain-error';
 import { thd } from '../../../shared/dates';
 import { createStore, type Store } from '../../../shared/store';
+import { prepareAuction, type AuctionRequest } from '../domain/auction';
 import { blockReason, DisposalCase, type BlockReason, type CaseEffect, type Fault } from '../domain/case';
 import { REASONS, type MethodKey } from '../domain/methods';
 import type { DisposalCaseRepository } from '../domain/repositories';
@@ -47,6 +48,8 @@ export function initialDesk(): DisposalDesk {
 /** The disposal plan screen and the case dialog. It loads the case, calls the domain, saves, and updates the assets. */
 export class DisposalService {
   readonly desk: Store<DisposalDesk> = createStore<DisposalDesk>(initialDesk());
+  /** The older auction proposal, read by the calendar and the auction document. */
+  readonly auction: Store<AuctionRequest | null> = createStore<AuctionRequest | null>(null);
 
   constructor(
     private readonly clock: Clock,
@@ -112,6 +115,7 @@ export class DisposalService {
   private edit(p: Partial<CaseDraft>): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, ...p }, note: null })); }
 
   setFault(fault: Fault): void { this.edit({ fault }); }
+  setOag(oag: string): void { this.edit({ oag }); }
   setBuyer(buyer: string): void { this.edit({ buyer }); }
   setReceipt(receipt: string): void { this.edit({ receipt }); }
   setParty(party: string): void { this.edit({ party }); }
@@ -163,5 +167,32 @@ export class DisposalService {
   recordResult(): void {
     const { draft } = this.desk.get();
     this.step((c) => c.recordResult({ soldPrices: draft.soldP, buyer: draft.buyer, receipt: draft.receipt, party: draft.party, ref: draft.ref }));
+  }
+
+  writeOff(): void { this.step((c) => c.writeOff()); }
+
+  notifyAuditor(): void { this.step((c) => c.notifyAuditor(this.desk.get().draft.oag)); }
+
+  /** Closes the finished case, clears the ticked rows and the dialog, and makes the next case number available. */
+  close(): void {
+    const open = this.cases.current();
+    if (!open) return;
+    const next = open.clone();
+    next.close();
+    this.cases.finish(next);
+    this.desk.set((d) => ({ ...d, sel: {}, modal: false, draft: { ...BLANK_DRAFT }, note: null }));
+  }
+
+  /** Proposes the ticked assets that are not borrowed for auction, without a case. */
+  prepAuction(): void {
+    const sel = this.desk.get().sel;
+    const candidates = Object.keys(sel).filter((k) => sel[k]).flatMap((k) => {
+      const a = this.assets.findById(k);
+      return a ? [{ id: a.id, status: a.status, hasOpenTicket: this.repairs.hasOpenTicket(a.id) }] : [];
+    });
+    const prepared = prepareAuction(candidates, this.clock.now());
+    if (!prepared) return;
+    this.apply(prepared.effect, prepared.request.ids);
+    this.auction.set(prepared.request);
   }
 }

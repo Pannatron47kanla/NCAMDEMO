@@ -12,6 +12,7 @@ const TEXT: Record<string, (p: NonNullable<Params>) => string> = {
   SALE_PRICE_REQUIRED: () => 'กรอกราคาที่ขายได้ให้ครบทุกรายการ',
   BUYER_RECEIPT_REQUIRED: () => 'กรอกชื่อผู้ซื้อและเลขที่ใบเสร็จนำส่งเงินเป็นรายได้',
   PARTY_REF_REQUIRED: (p) => 'กรอก' + p.party + ' และเลขที่เอกสารอ้างอิง',
+  LETTER_REQUIRED: () => 'กรอกเลขที่หนังสือแจ้ง สตง.',
   OPEN_TICKET: () => 'มีงานซ่อมค้าง ต้องปิดใบงานก่อน',
 };
 

@@ -193,6 +193,34 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
                   )}
                 </>
               )}
+              {step === 4 && dates && (
+                <>
+                  <div style={{ fontWeight: 600 }}>ขั้นที่ 5 · ลงจ่ายออกจากทะเบียน</div>
+                  <div>เมื่อยืนยัน ครุภัณฑ์ {current.data.ids.length} รายการจะเปลี่ยนเป็น "จำหน่ายแล้ว" หายจากทะเบียนใช้งาน แผนที่ ปฏิทิน และเคาน์เตอร์ยืม แต่ยังค้นประวัติได้ในทะเบียน (กรองสถานะ "จำหน่ายแล้ว")</div>
+                  <div><button className="btn pri" onClick={() => svc.writeOff()}>ยืนยันลงจ่ายออกจากทะเบียน ({thd(dates.writeoff)})</button></div>
+                </>
+              )}
+              {step === 5 && dates && (
+                <>
+                  <div style={{ fontWeight: 600 }}>ขั้นที่ 6 · แจ้งสำนักงานการตรวจเงินแผ่นดิน</div>
+                  <div className="lbl">ต้องแจ้งภายใน {thd(dates.oagDue)} (30 วันทำการนับจากวันลงจ่าย) ระบบขึ้นเตือนในปฏิทินแล้ว</div>
+                  <div className="fld"><label htmlFor="d-oag" className="lbl">เลขที่หนังสือแจ้ง สตง.</label><input id="d-oag" className="inp" placeholder="เช่น [เลขที่]/2569" value={desk.draft.oag} onChange={(e) => svc.setOag(e.target.value)} /></div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <button className="btn pri" onClick={() => svc.notifyAuditor()}>บันทึกการแจ้ง สตง.</button>
+                    <button className="btn" onClick={() => onPrint('dispResult')}>ดูรายงานผลการจำหน่าย</button>
+                  </div>
+                </>
+              )}
+              {step === 6 && dates && (
+                <>
+                  <div style={{ fontWeight: 700, color: '#0b5e57', fontSize: 16 }}>จำหน่ายเสร็จสมบูรณ์</div>
+                  <div>ลงจ่ายออกจากทะเบียน {thd(dates.writeoff)} · แจ้ง สตง. หนังสือที่ {current.data.oag}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <button className="btn pri" onClick={() => onPrint('dispResult')}>ดูรายงานผลการจำหน่าย</button>
+                    <button className="btn" onClick={() => svc.close()}>ปิดเรื่องและเริ่มเรื่องใหม่</button>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

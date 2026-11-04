@@ -165,3 +165,65 @@ describe('recording the result', () => {
     expect(asset('A17').events.at(-1)).toEqual({ date: '27 พ.ย. 69', text: 'ขายทอดตลาด ให้ บจ. ผู้ซื้อ ราคา 12,000 บาท · ใบเสร็จ ร.1/2569', doc: 'DS-2569-001' });
   });
 });
+
+describe('completing the case', () => {
+  function soldCase() {
+    const t = setup();
+    t.svc.createCase();
+    t.svc.recordFact();
+    t.svc.approve();
+    t.svc.setMinPrice('A16', '5000');
+    t.svc.setMinPrice('A17', '12000');
+    t.svc.announce();
+    t.svc.setSoldPrice('A16', '5000');
+    t.svc.setSoldPrice('A17', '12000');
+    t.svc.setBuyer('บจ. ผู้ซื้อ');
+    t.svc.setReceipt('ร.1/2569');
+    t.svc.recordResult();
+    return t;
+  }
+
+  it('AC38: write-off makes the assets จำหน่ายแล้ว with the write-off line', () => {
+    const { svc, asset } = soldCase();
+    svc.writeOff();
+    expect(asset('A16').status).toBe('จำหน่ายแล้ว');
+    expect(asset('A17').events.at(-1)).toEqual({ date: '30 พ.ย. 69', text: 'ลงจ่ายออกจากทะเบียนครุภัณฑ์ (ข้อ 218)', doc: 'DS-2569-001' });
+  });
+
+  it('AC38: a blank letter shows LETTER_REQUIRED and adds no line', () => {
+    const { svc, disposal, asset } = soldCase();
+    svc.writeOff();
+    const lines = asset('A16').events.length;
+    svc.notifyAuditor();
+    expect(svc.desk.get().note?.code).toBe('LETTER_REQUIRED');
+    expect(disposal.current.get()!.data.step).toBe(5);
+    expect(asset('A16').events).toHaveLength(lines);
+  });
+
+  it('AC38: closing moves the case to the finished list, frees the dialog and the next case is DS-2569-002', () => {
+    const { svc, disposal, asset } = soldCase();
+    svc.writeOff();
+    svc.setOag('12/2569');
+    svc.notifyAuditor();
+    svc.openDialog();
+    svc.close();
+    expect(disposal.current.get()).toBeNull();
+    expect(disposal.done.get().map((c) => c.data.id)).toEqual(['DS-2569-001']);
+    expect(svc.desk.get().modal).toBe(false);
+    expect(svc.desk.get().sel).toEqual({});
+    expect(asset('A16').events.at(-1)!.text).toBe('แจ้งสำนักงานการตรวจเงินแผ่นดิน หนังสือที่ 12/2569');
+    svc.toggle('A12');
+    svc.createCase();
+    expect(disposal.current.get()!.data.id).toBe('DS-2569-002');
+  });
+
+  it('AC38: the older auction proposal skips borrowed assets, marks the others รอจำหน่าย and records them', () => {
+    const { svc, disposal, asset } = setup();
+    svc.toggle('A2');
+    svc.prepAuction();
+    expect(disposal.auction.get()).toEqual({ ids: ['A16', 'A17'] });
+    expect(asset('A16').status).toBe('รอจำหน่าย');
+    expect(asset('A2').status).toBe('ถูกยืม');
+    expect(asset('A16').events.at(-1)).toEqual({ date: '28 ต.ค. 69', text: 'เสนอจำหน่ายโดยการขายทอดตลาด (ครบอายุใช้งาน)', doc: 'บันทึกเสนอจำหน่าย' });
+  });
+});
