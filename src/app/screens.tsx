@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AssetScreen } from './AssetScreen';
 import { AuditScreen } from './AuditScreen';
 import { CounterScreen } from './CounterScreen';
+import { DisposalScreen } from './DisposalScreen';
 import { AssetsScreen, RoomScanPage } from './RegisterScreens';
 import { RepairScreen } from './RepairScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
@@ -30,6 +31,7 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   add: (ctx) => <AssetsScreen {...ctx} dialog="add" />,
   import: (ctx) => <AssetsScreen {...ctx} dialog="import" />,
   audit: (ctx) => <AuditScreen {...ctx} />,
+  disp: (ctx) => <DisposalScreen {...ctx} />,
   roomscan: (ctx) => <RoomScanPage {...ctx} />,
 };
 
