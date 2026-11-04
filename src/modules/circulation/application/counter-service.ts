@@ -3,10 +3,9 @@ import { addDays, th } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
 import { cartItemFor, isInCart, type CartItem, type CartPart } from '../domain/cart';
-import type { AssetStatus } from '../../registry';
 import type { BorrowerRepository, ChargeRepository, LoanRepository } from '../domain/repositories';
 import { Charge } from '../domain/charge';
-import type { ChargeDraft, ReturnCondition } from '../domain/return';
+import type { ChargeDraft, ReturnCondition, ReturnedAssetStatus } from '../domain/return';
 import type { LoanSettings } from '../domain/loan-settings';
 import type { AssetsPort, RepairIntake } from './ports';
 
@@ -25,11 +24,11 @@ export interface CounterState {
   blocked: boolean;
   cart: CartItem[];
   msg: CounterMessage | null;
-  /** The loan just saved, until the officer starts a new one. */
   /** The returned asset the officer is checking (return mode). */
   ret: ReturnDraft | null;
   /** The return just saved, until the next scan. */
   retDone: ReturnDone | null;
+  /** The loan just saved, until the officer starts a new one. */
   done: { loanId: string; due: Date; pending: boolean; count: number } | null;
 }
 
@@ -49,7 +48,7 @@ export interface ReturnDone {
   lateDays: number;
   finePerDay: number;
   loss: number;
-  status: AssetStatus;
+  status: ReturnedAssetStatus;
 }
 
 export interface CounterDeps {

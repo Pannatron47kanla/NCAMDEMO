@@ -29,6 +29,13 @@ describe('counter return scan', () => {
     expect(state().ret).toBeNull();
   });
 
+  it('AC15: a code with spaces around it in return mode finds the loan as if trimmed', () => {
+    const { counter, state, registry } = setup();
+    counter.setMode('return');
+    counter.scan('  ' + registry.catalog.findById('A2')!.code + ' ');
+    expect(state().ret).toMatchObject({ loanId: 'L-2569-0412', assetId: 'A2' });
+  });
+
   it('AC15: an unknown asset code in return mode is ASSET_NOT_FOUND', () => {
     const { counter } = setup();
     counter.setMode('return');

@@ -1,6 +1,8 @@
-import type { AssetStatus } from '../../registry';
 import type { CartPart } from './cart';
 import type { Loan } from './loan';
+
+/** The status a returned asset gets. A subset of the registry's statuses. */
+export type ReturnedAssetStatus = 'พร้อมใช้' | 'ชิ้นส่วนไม่ครบ' | 'รอซ่อม';
 
 export type ReturnCondition = 'สภาพดี' | 'ชำรุด';
 
@@ -21,7 +23,7 @@ export interface ChargeDraft {
 }
 
 export interface ReturnOutcome {
-  assetStatus: AssetStatus;
+  assetStatus: ReturnedAssetStatus;
   charges: ChargeDraft[];
   needsRepair: boolean;
   /** `ครบทุกชิ้น`, or `ขาด <part> × <qty>, ...`. */
