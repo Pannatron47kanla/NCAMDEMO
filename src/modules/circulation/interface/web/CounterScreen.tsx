@@ -1,4 +1,5 @@
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import { diffDays, thd } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
 import { useStore } from '../../../../shared/web/useStore';
 import type { Asset } from '../../../registry';
@@ -39,11 +40,13 @@ function modeStyle(on: boolean): CSSProperties {
 interface Chip { code: string; sub: string }
 
 // Counter screen, ported from mockup lines 510-549 (shared frame) and 551-605 (borrow panel).
-export function CounterScreen({ circulation, assets, returnPanel, aside }: CounterScreenProps) {
+export function CounterScreen({ circulation, assets, now, returnPanel, aside }: CounterScreenProps) {
   const counter = circulation.counter;
   const c = useStore(counter.state);
   const borrowers = useStore(circulation.borrowers);
   const isBorrow = c.mode === 'borrow';
+  const loans = useStore(circulation.loans);
+  const settings = useStore(circulation.settings);
   const borrower = c.borrowerCode ? borrowers.find((b) => b.code === c.borrowerCode) : undefined;
 
   let chips: Chip[] = [];
@@ -54,6 +57,13 @@ export function CounterScreen({ circulation, assets, returnPanel, aside }: Count
       return a ? [{ code: a.code, sub: a.name.replace(/ \(.*\)/, '') + ' · ' + a.status }] : [];
     });
   }
+
+  const nameOf = (id: string) => assets.find((a) => a.id === id)?.name ?? id;
+  const overdue = borrower && c.blocked
+    ? borrower.overdueLoans(loans, now).map((l) => ({
+      id: l.id, items: l.openItems().map((i) => nameOf(i.assetId)).join(', '), due: thd(l.due), late: diffDays(l.due, now) + ' วัน',
+    }))
+    : [];
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -129,7 +139,10 @@ export function CounterScreen({ circulation, assets, returnPanel, aside }: Count
             {c.msg ? <div role="status" style={{ padding: '10px 12px', borderRadius: 6, fontWeight: 500, ...MSG_COLORS[c.msg.kind] }}>{messageText(c.msg.code, c.msg.params)}</div> : null}
           </section>
           {isBorrow
-            ? <BorrowPanel state={c} borrower={borrower} />
+            ? <>
+              <BorrowPanel state={c} borrower={borrower} held={borrower ? borrower.kitsHeld(loans) : 0} maxSets={settings.maxSets} overdue={overdue} />
+              {c.blocked ? <div><button className="btn" onClick={() => counter.reset()}>รายการใหม่ (สแกนผู้ยืมคนถัดไป)</button></div> : null}
+            </>
             : (returnPanel ?? <div className="card" style={{ padding: 20, color: '#46565c' }}>สแกนป้าย QR ของครุภัณฑ์ที่นำมาคืน ระบบจะค้นใบยืมให้เอง</div>)}
         </div>
         {aside}

@@ -1,3 +1,5 @@
+import type { Loan } from './loan';
+
 export type BorrowerType = 'นักศึกษา' | 'อาจารย์';
 
 export interface BorrowerProps {
@@ -20,4 +22,15 @@ export class Borrower {
   get type(): BorrowerType { return this.props.type; }
   get info(): string { return this.props.info; }
   get isStudent(): boolean { return this.props.type === 'นักศึกษา'; }
+
+  /** Loans past their due date that still have an item out. Pending (unapproved) loans do not count. */
+  overdueLoans(loans: readonly Loan[], now: Date): Loan[] {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return loans.filter((l) => l.borrowerCode === this.code && !l.pending && l.due.getTime() < today && l.openItems().length > 0);
+  }
+
+  /** Kits (assets with parts) this borrower still holds. */
+  kitsHeld(loans: readonly Loan[]): number {
+    return loans.filter((l) => l.borrowerCode === this.code).reduce((n, l) => n + l.openItems().filter((i) => i.kit).length, 0);
+  }
 }

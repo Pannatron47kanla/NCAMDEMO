@@ -64,9 +64,20 @@ export class CounterService {
     }
     // Return mode is handled by the return side of the counter.
     if (this.state.get().mode !== 'borrow') return;
-    const borrower = this.deps.borrowers.findByCode(code);
-    if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code });
-    this.patch({ scan: '', borrowerCode: borrower.code, blocked: false, msg: { kind: 'ok', code: 'BORROWER_OK' } });
+    const c = this.state.get();
+    if (!c.borrowerCode) {
+      const borrower = this.deps.borrowers.findByCode(code);
+      if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code });
+      const overdue = borrower.overdueLoans(this.deps.loans.list(), this.clock.now());
+      if (overdue.length) {
+        const params = { count: overdue.length };
+        this.patch({ scan: '', borrowerCode: borrower.code, blocked: true, msg: { kind: 'err', code: 'BORROWER_OVERDUE', params } });
+        throw new DomainError('BORROWER_OVERDUE', params);
+      }
+      this.patch({ scan: '', borrowerCode: borrower.code, blocked: false, msg: { kind: 'ok', code: 'BORROWER_OK' } });
+      return;
+    }
+    if (c.blocked) this.refuse('BORROWER_BLOCKED');
   }
 
   /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */

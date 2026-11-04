@@ -50,4 +50,17 @@ describe('counter screen', () => {
     await user.type(screen.getByRole('textbox'), '9999999999{Enter}');
     expect(screen.getByRole('status')).toHaveTextContent('ไม่พบรหัสผู้ยืม 9999999999 ในทะเบียนผู้ยืม');
   });
+
+  it('AC8: a blocked borrower shows the overdue error, the งดยืม chip, the overdue loan and a new-borrower button', async () => {
+    const { user } = show();
+    await user.click(screen.getByRole('button', { name: /6511010088/ }));
+    expect(screen.getByRole('status')).toHaveTextContent('ยืมไม่ได้: มีรายการเกินกำหนดคืน 1 ใบยืม ต้องคืนก่อน');
+    expect(screen.getByText('งดยืม', { selector: '.chip' })).toBeInTheDocument();
+    expect(screen.getByText('ถือชุดหุ่น/ชุดฝึกอยู่ 1 ชุด · สูงสุด 2 ชุดต่อนักศึกษา')).toBeInTheDocument();
+    expect(screen.getByText(/ค้างคืน .* · กำหนดคืน 25 ต\.ค\. 69 · ช้า 3 วัน/)).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox'), '6515-002-0001{Enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('ผู้ยืมรายนี้งดยืมจนกว่าจะคืนรายการที่ค้าง');
+    await user.click(screen.getByRole('button', { name: 'รายการใหม่ (สแกนผู้ยืมคนถัดไป)' }));
+    expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
+  });
 });
