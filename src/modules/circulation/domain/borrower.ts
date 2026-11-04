@@ -58,7 +58,7 @@ export class Borrower {
       }),
       start: addDays(now, 0),
       due: addDays(now, settings.loanDays),
-      pending: false,
+      pending: settings.needApproval && this.isStudent,
     });
   }
 }

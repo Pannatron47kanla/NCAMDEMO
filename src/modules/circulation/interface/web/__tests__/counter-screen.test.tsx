@@ -136,4 +136,15 @@ describe('counter screen', () => {
     await user.click(screen.getByRole('button', { name: 'ล้างรายการ' }));
     expect(screen.getByText('เริ่มจากสแกนบัตรนักศึกษาหรือบัตรบุคลากร ระบบจะตรวจสิทธิ์ก่อนให้สแกนครุภัณฑ์')).toBeInTheDocument();
   });
+
+  it('AC14: with needApproval a student sees the approval note and the pending receipt', async () => {
+    const { user, registry, circulation } = show();
+    circulation.settings.set((st) => ({ ...st, needApproval: true }));
+    await user.click(screen.getByRole('button', { name: /6611010015/ }));
+    await user.type(screen.getByRole('textbox'), `${registry.catalog.findById('A5')!.code}{Enter}`);
+    expect(screen.getByText('นักศึกษาต้องรออาจารย์อนุมัติก่อนรับของ')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการยืม' }));
+    expect(screen.getByRole('status')).toHaveTextContent('ส่งคำขอยืมแล้ว รออาจารย์อนุมัติ');
+    expect(screen.getByText('ส่งคำขอยืมแล้ว รออาจารย์อนุมัติ', { selector: 'div[style*="font-size: 18px"]' })).toBeInTheDocument();
+  });
 });

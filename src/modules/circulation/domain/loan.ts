@@ -36,6 +36,11 @@ export class Loan {
   get due(): Date { return this.props.due; }
   get pending(): boolean { return this.props.pending; }
 
+  /** A teacher approved a pending loan. Returns the loan as it is after that. */
+  approve(): Loan {
+    return new Loan({ ...this.props, pending: false });
+  }
+
   openItems(): LoanItem[] {
     return this.props.items.filter((i) => !i.returned);
   }

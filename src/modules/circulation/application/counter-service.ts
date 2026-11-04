@@ -77,13 +77,22 @@ export class CounterService {
     this.deps.loans.add(loan);
     for (const it of c.cart) {
       this.deps.assets.setStatus(it.assetId, 'ถูกยืม');
-      this.deps.assets.addEvent(it.assetId, { date: th(now, 0), text: 'ยืมโดย ' + borrower.name + ' กำหนดคืน ' + th(now, settings.loanDays), doc: loan.id });
+      this.deps.assets.addEvent(it.assetId, { date: th(now, 0), text: (loan.pending ? 'ขอยืม (รออนุมัติ) โดย ' : 'ยืมโดย ') + borrower.name + ' กำหนดคืน ' + th(now, settings.loanDays), doc: loan.id });
     }
     this.patch({
       cart: [],
       done: { loanId: loan.id, due: loan.due, pending: loan.pending, count: loan.items.length },
-      msg: { kind: 'ok', code: 'LOAN_SAVED' },
+      msg: { kind: 'ok', code: loan.pending ? 'LOAN_REQUESTED' : 'LOAN_SAVED' },
     });
+  }
+
+  /** A teacher approves a pending student loan. */
+  approve(loanId: string): void {
+    const loan = this.deps.loans.findById(loanId);
+    if (!loan) return;
+    const now = this.clock.now();
+    for (const it of loan.items) this.deps.assets.addEvent(it.assetId, { date: th(now, 0), text: 'อาจารย์อนุมัติการยืม', doc: loanId });
+    this.deps.loans.save(loan.approve());
   }
 
   /** Clears the borrower and cart for the next person. */

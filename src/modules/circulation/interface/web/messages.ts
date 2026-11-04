@@ -14,6 +14,7 @@ const TEXT: Record<string, (p: NonNullable<Params>) => string> = {
   ASSET_NOT_AVAILABLE: (p) => 'จ่ายไม่ได้: ' + p.name + ' สถานะ "' + p.status + '"',
   KIT_LIMIT_REACHED: (p) => 'เกินจำนวนสูงสุด ' + p.max + ' ชุดต่อนักศึกษา (มีในรายการ/ถืออยู่แล้ว ' + p.held + ' ชุด)',
   LOAN_ALREADY_SAVED: () => 'รายการนี้บันทึกแล้ว กด "รายการใหม่" เพื่อเริ่มผู้ยืมคนถัดไป',
+  LOAN_REQUESTED: () => 'ส่งคำขอยืมแล้ว รออาจารย์อนุมัติ',
   LOAN_SAVED: () => 'บันทึกการยืมแล้ว',
   ITEM_ADDED: (p) => 'เพิ่ม ' + p.name,
   ITEM_REMOVED: (p) => 'เอา ' + p.name + ' ออกจากรายการ',

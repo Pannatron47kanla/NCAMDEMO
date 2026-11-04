@@ -221,3 +221,33 @@ describe('confirm borrow', () => {
     expect(state().borrowerCode).toBe('T0007');
   });
 });
+
+describe('loans that need approval', () => {
+  function borrowWith(code: string) {
+    const ctx = setup();
+    ctx.circulation.settings.set((s) => ({ ...s, needApproval: true }));
+    ctx.counter.scan(code);
+    ctx.counter.scan(ctx.registry.catalog.findById('A5')!.code);
+    ctx.counter.confirmBorrow();
+    return ctx;
+  }
+
+  it('AC14: with needApproval a student loan is pending, says so in the history, and approve clears it', () => {
+    const { counter, circulation, registry, clock, state } = borrowWith('6611010015');
+    expect(circulation.loans.get()[1]!.pending).toBe(true);
+    expect(state().done).toMatchObject({ pending: true, count: 1 });
+    expect(state().msg).toEqual({ kind: 'ok', code: 'LOAN_REQUESTED' });
+    expect(registry.catalog.findById('A5')!.events.at(-1)!.text).toBe('ขอยืม (รออนุมัติ) โดย นางสาวพิมพ์ชนก ศรีสุข กำหนดคืน ' + th(clock.now(), 7));
+    counter.approve('L-2569-0413');
+    expect(circulation.loans.get()[1]!.pending).toBe(false);
+    expect(registry.catalog.findById('A5')!.events.at(-1)).toEqual({ date: th(clock.now(), 0), text: 'อาจารย์อนุมัติการยืม', doc: 'L-2569-0413' });
+  });
+
+  it('AC14: a teacher loan is not pending even with needApproval', () => {
+    const { circulation, registry, clock, state } = borrowWith('T0007');
+    expect(circulation.loans.get()[1]!.pending).toBe(false);
+    expect(state().done).toMatchObject({ pending: false });
+    expect(state().msg).toEqual({ kind: 'ok', code: 'LOAN_SAVED' });
+    expect(registry.catalog.findById('A5')!.events.at(-1)!.text).toBe('ยืมโดย อ.ดร.สุภาวดี วงศ์ใหญ่ กำหนดคืน ' + th(clock.now(), 7));
+  });
+});
