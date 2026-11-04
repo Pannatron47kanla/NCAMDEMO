@@ -15,3 +15,13 @@ describe('opening a ticket', () => {
     }
   });
 });
+
+describe('a reported ticket', () => {
+  it('AC22: opens as รอรับงาน with no route, no cost and nothing ticked, and keeps the trimmed symptom', () => {
+    const t = RepairTicket.open(input('  หุ่นไม่ส่งสัญญาณ  '));
+    expect(t).toMatchObject({
+      id: 'WO-2569-032', assetId: 'A3', symptom: 'หุ่นไม่ส่งสัญญาณ', status: 'รอรับงาน', route: '-', cost: '', tested: false, partsOk: false, reporter: 'lab.officer',
+    });
+    expect(t.createdAt).toEqual(NOW);
+  });
+});

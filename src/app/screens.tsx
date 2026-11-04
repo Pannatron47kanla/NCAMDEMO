@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AssetScreen } from './AssetScreen';
 import { CounterScreen } from './CounterScreen';
+import { RepairScreen } from './RepairScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import type { AppModules } from './modules';
 import type { ScreenKey, ScreenParams } from './navigation';
@@ -22,4 +23,5 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   dash: () => <DashboardScreen />,
   asset: (ctx) => <AssetScreen {...ctx} />,
   counter: (ctx) => <CounterScreen {...ctx} />,
+  repair: (ctx) => <RepairScreen {...ctx} />,
 };
