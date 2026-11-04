@@ -76,3 +76,30 @@ describe('counter on-time return', () => {
     expect(env.registry.catalog.findById('A2')!.status).toBe('ถูกยืม');
   });
 });
+
+describe('counter late return', () => {
+  it('AC17: the seed loan 3 days late records a fine of 15 for its borrower and shows the lateness in history', () => {
+    const env = setup();
+    const { counter, registry, circulation, state } = env;
+    counter.setMode('return');
+    counter.scan(registry.catalog.findById('A2')!.code);
+    counter.confirmReturn();
+    const charges = circulation.charges.get();
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({ id: 'CH1', borrowerCode: '6511010088', desc: 'ค่าปรับคืนช้า 3 วัน · ' + registry.catalog.findById('A2')!.name, amount: 15, paid: false });
+    expect(state().retDone).toMatchObject({ fine: 15, lateDays: 3, finePerDay: 5, loss: 0 });
+    const events = registry.catalog.findById('A2')!.events;
+    expect(events[events.length - 1]!.text).toBe('รับคืนจาก นางสาวกัญญาณัฐ บุญมา ช้า 3 วัน · ครบทุกชิ้น');
+    counter.confirmReturn();
+    expect(circulation.charges.get()).toHaveLength(1);
+  });
+
+  it('AC17: finePerDay 10 gives a fine of 30', () => {
+    const env = setup();
+    env.circulation.settings.set((s) => ({ ...s, finePerDay: 10 }));
+    env.counter.setMode('return');
+    env.counter.scan(env.registry.catalog.findById('A2')!.code);
+    env.counter.confirmReturn();
+    expect(env.circulation.charges.get().map((c) => c.amount)).toEqual([30]);
+  });
+});

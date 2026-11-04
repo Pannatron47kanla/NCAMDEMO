@@ -53,3 +53,17 @@ describe('on-time return', () => {
     expect(loan({ due: today }).receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today).lateDays).toBe(0);
   });
 });
+
+describe('late return', () => {
+  it('AC17: 3 days late at 5 baht a day creates a fine charge of 15', () => {
+    const outcome = loan().receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today);
+    expect(outcome.lateDays).toBe(3);
+    expect(outcome.charges).toEqual([{ kind: 'fine', desc: 'ค่าปรับคืนช้า 3 วัน · หุ่น CPR ชุดที่ 2', amount: 15 }]);
+    expect(outcome.assetStatus).toBe('พร้อมใช้');
+  });
+
+  it('AC17: the fine follows the finePerDay setting', () => {
+    const outcome = loan().receiveReturn(input(), { ...DEFAULT_LOAN_SETTINGS, finePerDay: 10 }, today);
+    expect(outcome.charges.map((c) => c.amount)).toEqual([30]);
+  });
+});

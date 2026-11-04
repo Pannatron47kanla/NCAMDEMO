@@ -47,3 +47,15 @@ describe('return panel', () => {
     expect(screen.getByText('สแกนป้าย QR ของครุภัณฑ์ที่นำมาคืน ระบบจะค้นใบยืมให้เอง')).toBeInTheDocument();
   });
 });
+
+describe('late return panel', () => {
+  it('AC17: the seed loan shows the late chip and fine before confirming, and the fine on the saved card', async () => {
+    const { user, registry } = show();
+    await user.click(screen.getByRole('button', { name: 'รับคืน' }));
+    await user.type(screen.getByRole('textbox'), `${registry.catalog.findById('A2')!.code}{Enter}`);
+    expect(screen.getByText('คืนช้า 3 วัน', { selector: '.chip' })).toBeInTheDocument();
+    expect(screen.getByText('15 บาท (3 วัน × 5 บาท)')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการรับคืน' }));
+    expect(screen.getByText('15 บาท (ช้า 3 วัน × 5 บาท)')).toBeInTheDocument();
+  });
+});

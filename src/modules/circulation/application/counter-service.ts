@@ -5,7 +5,8 @@ import { createStore, type Store } from '../../../shared/store';
 import { cartItemFor, isInCart, type CartItem, type CartPart } from '../domain/cart';
 import type { AssetStatus } from '../../registry';
 import type { BorrowerRepository, ChargeRepository, LoanRepository } from '../domain/repositories';
-import type { ReturnCondition } from '../domain/return';
+import { Charge } from '../domain/charge';
+import type { ChargeDraft, ReturnCondition } from '../domain/return';
 import type { LoanSettings } from '../domain/loan-settings';
 import type { AssetsPort } from './ports';
 
@@ -57,6 +58,10 @@ export interface CounterDeps {
   charges: ChargeRepository;
   settings: Store<LoanSettings>;
   assets: AssetsPort;
+}
+
+function amountOf(charges: readonly ChargeDraft[], kind: ChargeDraft['kind']): number {
+  return charges.filter((c) => c.kind === kind).reduce((t, c) => t + c.amount, 0);
 }
 
 export function initialCounterState(): CounterState {
@@ -207,12 +212,15 @@ export class CounterService {
     const settings = this.deps.settings.get();
     const out = loan.receiveReturn({ assetId: asset.id, assetName: asset.name, parts: r.parts, condition: r.cond }, settings, now);
     this.deps.loans.save(out.loan);
+    for (const draft of out.charges) {
+      this.deps.charges.add(Charge.open({ id: this.deps.charges.nextId(), borrowerCode: borrower.code, desc: draft.desc, amount: draft.amount }));
+    }
     this.deps.assets.setStatus(asset.id, out.assetStatus);
     const text = 'รับคืนจาก ' + borrower.name + (out.lateDays ? ' ช้า ' + out.lateDays + ' วัน' : ' ตรงเวลา') + ' · ' + out.missingText;
     this.deps.assets.addEvent(asset.id, { date: th(now, 0), text, doc: loan.id });
     this.patch({
       ret: null, msg: { kind: 'ok', code: 'RETURN_SAVED' },
-      retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: 0, lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: 0, status: out.assetStatus },
+      retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: amountOf(out.charges, 'fine'), lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: 0, status: out.assetStatus },
     });
   }
 

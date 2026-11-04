@@ -2,7 +2,7 @@ import { diffDays } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import type { LoanSettings } from './loan-settings';
 import type { CartPart } from './cart';
-import { lossOf, type ReturnInput, type ReturnOutcome, type ReturnQuote } from './return';
+import { lossOf, type ChargeDraft, type ReturnInput, type ReturnOutcome, type ReturnQuote } from './return';
 
 /** One asset on a loan. `kit` is true when the asset has parts, which is what the student limit counts. */
 export interface LoanItem {
@@ -59,13 +59,15 @@ export class Loan {
   }
 
   /** The asset comes back. Throws `NO_OPEN_LOAN` when this loan has no open item for it. */
-  receiveReturn(input: ReturnInput, _settings: LoanSettings, now: Date): ReturnOutcome {
+  receiveReturn(input: ReturnInput, settings: LoanSettings, now: Date): ReturnOutcome {
     if (!this.props.items.some((i) => i.assetId === input.assetId && !i.returned)) throw new DomainError('NO_OPEN_LOAN', { name: input.assetName });
-    const lateDays = this.lateDays(now);
+    const { lateDays, fine } = this.quoteReturn(input.parts, settings, now);
+    const charges: ChargeDraft[] = [];
+    if (fine > 0) charges.push({ kind: 'fine', desc: 'ค่าปรับคืนช้า ' + lateDays + ' วัน · ' + input.assetName, amount: fine });
     const missing = input.parts.filter((p) => !p.checked);
     const missingText = missing.length ? 'ขาด ' + missing.map((p) => p.name + ' × ' + p.qty).join(', ') : 'ครบทุกชิ้น';
     const loan = new Loan({ ...this.props, items: this.props.items.map((i) => (i.assetId === input.assetId ? { ...i, returned: true } : { ...i })) });
-    return { assetStatus: 'พร้อมใช้', charges: [], needsRepair: false, missingText, lateDays, loan };
+    return { assetStatus: 'พร้อมใช้', charges, needsRepair: false, missingText, lateDays, loan };
   }
 
   openItems(): LoanItem[] {
