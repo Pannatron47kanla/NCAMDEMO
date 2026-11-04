@@ -1,3 +1,6 @@
+import { DomainError } from '../../../shared/domain-error';
+import type { ReturnInput, ReturnOutcome } from './return';
+
 /** One asset on a loan. `kit` is true when the asset has parts, which is what the student limit counts. */
 export interface LoanItem {
   assetId: string;
@@ -39,6 +42,12 @@ export class Loan {
   /** A teacher approved a pending loan. Returns the loan as it is after that. */
   approve(): Loan {
     return new Loan({ ...this.props, pending: false });
+  }
+
+  /** The asset comes back. Throws `NO_OPEN_LOAN` when this loan has no open item for it. */
+  receiveReturn(input: ReturnInput): ReturnOutcome {
+    if (!this.props.items.some((i) => i.assetId === input.assetId && !i.returned)) throw new DomainError('NO_OPEN_LOAN', { name: input.assetName });
+    throw new Error('not implemented yet');
   }
 
   openItems(): LoanItem[] {

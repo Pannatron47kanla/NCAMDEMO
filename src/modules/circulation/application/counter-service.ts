@@ -2,8 +2,9 @@ import type { Clock } from '../../../shared/clock';
 import { th } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
-import { cartItemFor, isInCart, type CartItem } from '../domain/cart';
+import { cartItemFor, isInCart, type CartItem, type CartPart } from '../domain/cart';
 import type { BorrowerRepository, LoanRepository } from '../domain/repositories';
+import type { ReturnCondition } from '../domain/return';
 import type { LoanSettings } from '../domain/loan-settings';
 import type { AssetsPort } from './ports';
 
@@ -23,7 +24,16 @@ export interface CounterState {
   cart: CartItem[];
   msg: CounterMessage | null;
   /** The loan just saved, until the officer starts a new one. */
+  /** The returned asset the officer is checking (return mode). */
+  ret: ReturnDraft | null;
   done: { loanId: string; due: Date; pending: boolean; count: number } | null;
+}
+
+export interface ReturnDraft {
+  loanId: string;
+  assetId: string;
+  parts: CartPart[];
+  cond: ReturnCondition;
 }
 
 export interface CounterDeps {
@@ -34,7 +44,7 @@ export interface CounterDeps {
 }
 
 export function initialCounterState(): CounterState {
-  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, done: null };
+  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, ret: null, done: null };
 }
 
 /** The เคาน์เตอร์ยืม-คืน: one scan box that first takes the borrower, then assets. */
@@ -49,8 +59,8 @@ export class CounterService {
 
   /** Borrow keeps the borrower and cart. Return starts clean (mockup setBorrow / setReturn). */
   setMode(mode: CounterState['mode']): void {
-    if (mode === 'borrow') this.patch({ mode, msg: null, scan: '' });
-    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [], done: null });
+    if (mode === 'borrow') this.patch({ mode, msg: null, scan: '', ret: null });
+    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [], ret: null, done: null });
   }
 
   removeFromCart(assetId: string): void {
@@ -107,8 +117,7 @@ export class CounterService {
       this.patch({ msg: { kind: 'warn', code: 'EMPTY_SCAN' } });
       return;
     }
-    // Return mode is handled by the return side of the counter.
-    if (this.state.get().mode !== 'borrow') return;
+    if (this.state.get().mode !== 'borrow') return this.scanReturn(code);
     const c = this.state.get();
     if (c.done) return this.refuse('LOAN_ALREADY_SAVED');
     if (!c.borrowerCode) {
@@ -139,6 +148,14 @@ export class CounterService {
       throw e;
     }
     this.patch({ scan: '', cart: c.cart.concat([cartItemFor(asset)]), msg: { kind: 'ok', code: 'ITEM_ADDED', params: { name: asset.name } } });
+  }
+
+  /** Return mode: finds the loan holding the scanned asset. */
+  private scanReturn(code: string): void {
+    const asset = this.deps.assets.findByCode(code);
+    if (!asset) return this.refuse('ASSET_NOT_FOUND', { code });
+    const loan = this.deps.loans.findHolding(asset.id);
+    if (!loan) return this.refuse('NO_OPEN_LOAN', { name: asset.name });
   }
 
   /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */
