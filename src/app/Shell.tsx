@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { buildNav, CHEV_DOWN, CHEV_UP, NAV_ICONS, screenLabel, type NavEntry, type NavGroup, type NavOpen } from './nav';
 import { START_SCREEN, type Navigation, type ScreenKey, type ScreenParams } from './navigation';
 import type { AppModules } from './modules';
-import { SCREENS, type ScreenContext } from './screens';
+import { ON_MENU, SCREENS, type ScreenContext } from './screens';
 
 interface Props {
   modules: AppModules;
@@ -76,7 +76,7 @@ export function Shell({ modules, role, navOpen, onToggleGroup, onLogout }: Props
     <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
       <nav aria-label="เมนูหลัก" style={{ flex: '1 1 236px', boxSizing: 'border-box', padding: '8px 10px 12px', background: '#fff', borderRight: '1px solid #d8e1e4', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {buildNav(nav.screen, navOpen).map((entry, i) => (
-          <NavItem key={i} entry={entry} go={(s) => go(s)} toggle={onToggleGroup} />
+          <NavItem key={i} entry={entry} go={(s) => { ON_MENU[s]?.(modules); go(s); }} toggle={onToggleGroup} />
         ))}
         <div style={{ marginTop: 'auto', padding: 12, borderTop: '1px solid #e3e9eb', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ fontWeight: 600 }}>lab.officer</div>

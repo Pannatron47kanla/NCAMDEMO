@@ -1,5 +1,6 @@
 import { systemClock, type Clock } from '../../shared/clock';
 import { createStore, type Store } from '../../shared/store';
+import { AssetListService } from './application/asset-list-service';
 import { AddAssetService } from './application/add-asset-service';
 import { ImportService } from './application/import-service';
 import { RoomScanService } from './application/room-scan-service';
@@ -14,6 +15,8 @@ export interface RegistryModule {
   catalog: AssetCatalog;
   /** The same data as an observable, for screens: `useStore(registry.assets)`. */
   assets: Store<Asset[]>;
+  /** The controls of the register list (search, filters, page, ticked rows). */
+  list: AssetListService;
   /** The ขึ้นทะเบียนใหม่ wizard. */
   addAsset: AddAssetService;
   /** The import dialog. */
@@ -29,5 +32,5 @@ export interface RegistryModule {
 export function createRegistryModule(clock: Clock = systemClock): RegistryModule {
   const assets = createStore<Asset[]>(seedAssets());
   const repository = new InMemoryAssetRepository(assets);
-  return { catalog: new InMemoryAssetCatalog(assets), assets, addAsset: new AddAssetService(clock, repository), importer: new ImportService(clock, repository), roomScan: new RoomScanService(clock, repository) };
+  return { catalog: new InMemoryAssetCatalog(assets), assets, list: new AssetListService(), addAsset: new AddAssetService(clock, repository), importer: new ImportService(clock, repository), roomScan: new RoomScanService(clock, repository) };
 }

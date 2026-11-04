@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AssetScreen } from './AssetScreen';
 import { CounterScreen } from './CounterScreen';
+import { AssetsScreen, RoomScanPage } from './RegisterScreens';
 import { RepairScreen } from './RepairScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import type { AppModules } from './modules';
@@ -24,4 +25,17 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   asset: (ctx) => <AssetScreen {...ctx} />,
   counter: (ctx) => <CounterScreen {...ctx} />,
   repair: (ctx) => <RepairScreen {...ctx} />,
+  assets: (ctx) => <AssetsScreen {...ctx} />,
+  add: (ctx) => <AssetsScreen {...ctx} dialog="add" />,
+  import: (ctx) => <AssetsScreen {...ctx} dialog="import" />,
+  roomscan: (ctx) => <RoomScanPage {...ctx} />,
+};
+
+/**
+ * What choosing a menu entry does before the screen opens. In the mockup the menu starts a blank wizard and
+ * the import dialog on step 1, while other ways back to the same screen (such as "back" from printing) keep them as they were.
+ */
+export const ON_MENU: Partial<Record<ScreenKey, (modules: AppModules) => void>> = {
+  add: (modules) => modules.registry.addAsset.start(),
+  import: (modules) => modules.registry.importer.start(),
 };
