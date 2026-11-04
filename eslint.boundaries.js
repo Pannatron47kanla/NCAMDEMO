@@ -20,6 +20,10 @@ export default [
       group: ['pg', 'express', 'typeorm', 'prisma', '@prisma/*', 'knex', 'react', 'react-dom',
               '**/application/**', '**/infrastructure/**', '**/interface/**'],
       message: 'domain ห้าม import ชั้นอื่น, ไลบรารี DB/HTTP หรือ React',
+    }, {
+      // รวม index.ts ของ context อื่นด้วย (เช่น ../../registry) ยกเว้น src/shared
+      regex: '^(\\.\\./){2,3}(?!shared(/|$))[^./]',
+      message: 'domain ห้าม import อะไรจาก context อื่น แม้ผ่าน index.ts',
     }]),
   },
   {
