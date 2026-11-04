@@ -1,7 +1,9 @@
 import type { Clock } from '../../../shared/clock';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
-import { assertCanLeave, newAssetForm, withCategory, withDemoSerials, type NewAssetForm, type PartDraft } from '../domain/new-asset';
+import type { Asset } from '../domain/asset';
+import type { AssetRepository } from '../domain/repositories';
+import { assertCanLeave, newAssetForm, registerAssets, withCategory, withDemoSerials, type NewAssetForm, type PartDraft } from '../domain/new-asset';
 
 /** A rule the wizard broke. The web layer turns `code` + `params` into Thai text. */
 export interface WizardError {
@@ -21,8 +23,10 @@ export interface AddAssetState {
 /** The ขึ้นทะเบียนใหม่ wizard: five steps, then one asset or a lot. */
 export class AddAssetService {
   readonly state: Store<AddAssetState>;
+  /** The mockup's newSeq: asset ids N1, N2, ... never repeat during one page load. */
+  private seq = 1;
 
-  constructor(private readonly clock: Clock) {
+  constructor(private readonly clock: Clock, private readonly assets: AssetRepository) {
     this.state = createStore<AddAssetState>(this.fresh());
   }
 
@@ -71,13 +75,37 @@ export class AddAssetService {
   /** "ถัดไป": moves one step on, or lists the problems and stays. */
   next(): void {
     const { form, step } = this.state.get();
+    if (step >= 5) { this.submit(); return; }
+    this.attempt(() => assertCanLeave(form, step), () => this.state.set((s) => ({ ...s, step: s.step + 1, error: null })));
+  }
+
+  /** Runs `check`; a broken rule is shown as the wizard's problem list, and `then` runs only when there is none. */
+  private attempt(check: () => void, then: () => void): void {
     try {
-      assertCanLeave(form, step);
+      check();
     } catch (e) {
       if (e instanceof DomainError) { this.state.set((s) => ({ ...s, error: { code: e.code, params: e.params } })); return; }
       throw e;
     }
-    this.state.set((s) => ({ ...s, step: s.step + 1, error: null }));
+    then();
+  }
+
+  /**
+   * Saves the lot: one asset per item, with the next free codes, and the wizard shows the finished card.
+   * Does nothing once saved, so a second press cannot make the lot twice. A broken rule changes nothing.
+   */
+  submit(): void {
+    const { form, doneIds } = this.state.get();
+    if (doneIds.length) return;
+    let made: Asset[] = [];
+    this.attempt(
+      () => { made = registerAssets(form, this.assets.list().map((a) => a.code), this.seq, this.clock.now()); },
+      () => {
+        this.assets.add(made);
+        this.seq += made.length;
+        this.state.set({ form: newAssetForm(this.clock.now()), step: 1, doneIds: made.map((a) => a.id), error: null });
+      },
+    );
   }
 
   back(): void {

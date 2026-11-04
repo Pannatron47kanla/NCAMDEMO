@@ -4,6 +4,7 @@ import { AddAssetService } from './application/add-asset-service';
 import type { Asset } from './domain/asset';
 import type { AssetCatalog } from './domain/asset-catalog';
 import { InMemoryAssetCatalog } from './infrastructure/in-memory-asset-catalog';
+import { InMemoryAssetRepository } from './infrastructure/in-memory-asset-repository';
 import { seedAssets } from './infrastructure/seed';
 
 export interface RegistryModule {
@@ -21,5 +22,6 @@ export interface RegistryModule {
  */
 export function createRegistryModule(clock: Clock = systemClock): RegistryModule {
   const assets = createStore<Asset[]>(seedAssets());
-  return { catalog: new InMemoryAssetCatalog(assets), assets, addAsset: new AddAssetService(clock) };
+  const repository = new InMemoryAssetRepository(assets);
+  return { catalog: new InMemoryAssetCatalog(assets), assets, addAsset: new AddAssetService(clock, repository) };
 }

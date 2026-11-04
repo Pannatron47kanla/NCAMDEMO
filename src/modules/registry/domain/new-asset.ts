@@ -1,6 +1,7 @@
-import { toIso } from '../../../shared/dates';
+import { th, toIso } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
-import { CATS, CUST, LAB1, MAX_LOT_SIZE, V1 } from './constants';
+import type { Asset, Part } from './asset';
+import { CATS, CUST, LAB1, LABD, MAX_LOT_SIZE, V1 } from './constants';
 
 // The add-asset wizard's rules, ported from the mockup (newForm, serialList, nfMissing; lines 1750-1753 and 1993-2032).
 // Every field is the text the officer typed, exactly as in the mockup, so a rule never sees a number it did not parse itself.
@@ -111,4 +112,89 @@ export function withDemoSerials(form: NewAssetForm): NewAssetForm {
   const out = current.slice();
   for (let k = current.length + 1; k <= lotSize(form.qty); k++) out.push('LS' + String(240000 + k * 7));
   return { ...form, serials: out.join('\n') };
+}
+
+/** The asset codes a lot of `n` gets: consecutive, above the highest code with this category's prefix, 4 digits. */
+export function nextCodes(existingCodes: readonly string[], cat: string, n: number): string[] {
+  const pre = CATS[cat]!.prefix;
+  let max = 0;
+  existingCodes.forEach((code) => {
+    if (code.indexOf(pre + '-') !== 0) return;
+    const k = parseInt(code.slice(pre.length + 1), 10);
+    if (k > max) max = k;
+  });
+  const out: string[] = [];
+  for (let i = 1; i <= n; i++) out.push(pre + '-' + String(max + i).padStart(4, '0'));
+  return out;
+}
+
+/** The fields every new asset gets, whichever way it enters the register (port of A(), lines 1707-1715). */
+export interface AssetBase {
+  id: string;
+  code: string;
+  name: string;
+  cat: string;
+  room: string;
+  price: number;
+  acq: string | null;
+  method?: string;
+  doc: string;
+  vendor?: string;
+  warranty?: string | null;
+  life: number;
+  parts?: Part[];
+  calib?: Asset['calib'];
+  custodian?: string;
+  events: Asset['events'];
+}
+
+/** A registered asset: พร้อมใช้, in the lab's own department. A purchase keeps its vendor; a transfer or gift names how it came. */
+export function newAsset(o: AssetBase): Asset {
+  const method = o.method || 'ซื้อ';
+  const buy = method === 'ซื้อ';
+  return {
+    id: o.id, code: o.code, name: o.name, cat: o.cat, dept: LABD, room: o.room, status: 'พร้อมใช้', price: o.price,
+    acq: o.acq, method, doc: o.doc, vendor: buy ? (o.vendor || '-') : (method === 'รับโอน' ? 'รับโอน' : 'รับบริจาค'),
+    warranty: o.warranty || null, life: o.life || 5, parts: o.parts || [], calib: o.calib || null, custodian: o.custodian || CUST, events: o.events,
+  };
+}
+
+/**
+ * Turns a finished wizard into its assets, one per item of the lot (port of submitNew, lines 2018-2043).
+ * Throws SAVE_INCOMPLETE if a required field is empty and LOT_INVALID if step 1 or 2 no longer passes
+ * (for example a quantity of 201); nothing is made in either case. `firstSeq` numbers the ids N<seq>, N<seq+1>, ...
+ */
+export function registerAssets(form: NewAssetForm, existingCodes: readonly string[], firstSeq: number, today: Date): Asset[] {
+  const miss: string[] = [];
+  if (!form.doc.trim()) miss.push('เลขที่เอกสาร');
+  if (!form.acq) miss.push('วันที่ได้มา');
+  if (!(whole(form.price) > 0)) miss.push(form.method === 'ซื้อ' ? 'ราคา' : 'มูลค่าประเมิน');
+  if (!form.name.trim()) miss.push('ชื่อครุภัณฑ์');
+  if (!(whole(form.life) > 0)) miss.push('อายุการใช้งาน');
+  if (!form.cust.trim()) miss.push('ผู้รับผิดชอบ');
+  if (miss.length) throw new DomainError('SAVE_INCOMPLETE', { missing: miss.join(', ') });
+  const qty = Math.max(1, whole(form.qty) || 1);
+  const lotMiss = missingFor(form, 1).concat(missingFor(form, 2));
+  if (lotMiss.length) throw new DomainError('LOT_INVALID', { missing: lotMiss.join(', ') });
+
+  const codes = nextCodes(existingCodes, form.cat, qty);
+  const serials = serialList(form.serials);
+  const parts: Part[] = form.parts.filter((p) => p.name.trim())
+    .map((p, i) => ({ name: p.name.trim(), qty: whole(p.qty) || 1, price: i === 0 ? 0 : whole(p.price) }));
+  const cycle = form.calib !== '0' ? whole(form.calib) : 0;
+  const date = th(today, 0);
+  const doc = form.doc.trim();
+  const cust = form.cust.trim();
+  return codes.map((code, i) => {
+    const sn = qty > 1 ? (serials[i] || '') : form.serial.trim();
+    const lot = qty > 1 ? ' · ล็อต ' + (i + 1) + '/' + qty : '';
+    const text = (form.method === 'ซื้อ' ? 'ตรวจรับ' : form.method) + ' ขึ้นทะเบียน ติดป้าย QR และส่งมอบ ' + cust + lot
+      + (sn ? ' · S/N ' + sn : (qty > 1 ? ' · S/N ยังไม่ระบุ' : ''));
+    return newAsset({
+      id: 'N' + (firstSeq + i), code, name: form.name.trim() + (form.brand.trim() ? ' (' + form.brand.trim() + ')' : ''), cat: form.cat, room: form.room,
+      price: whole(form.price), acq: form.acq, method: form.method, doc, vendor: form.vendor, warranty: form.warranty || null, life: whole(form.life),
+      parts: parts.map((p) => ({ ...p })), calib: cycle > 0 ? { last: form.acq, cycle } : null, custodian: cust,
+      events: [{ date, text, doc }],
+    });
+  });
 }
