@@ -220,7 +220,7 @@ export class CounterService {
     this.deps.assets.addEvent(asset.id, { date: th(now, 0), text, doc: loan.id });
     this.patch({
       ret: null, msg: { kind: 'ok', code: 'RETURN_SAVED' },
-      retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: amountOf(out.charges, 'fine'), lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: 0, status: out.assetStatus },
+      retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: amountOf(out.charges, 'fine'), lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: amountOf(out.charges, 'loss'), status: out.assetStatus },
     });
   }
 

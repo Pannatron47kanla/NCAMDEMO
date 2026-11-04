@@ -59,3 +59,18 @@ describe('late return panel', () => {
     expect(screen.getByText('15 บาท (ช้า 3 วัน × 5 บาท)')).toBeInTheDocument();
   });
 });
+
+describe('return panel with missing parts', () => {
+  it('AC18: unticking a part shows the loss before confirming and on the saved card', async () => {
+    const { user, registry } = show(['A10']);
+    await user.click(screen.getByRole('button', { name: 'รับคืน' }));
+    await user.type(screen.getByRole('textbox'), `${registry.catalog.findById('A10')!.code}{Enter}`);
+    await user.click(screen.getByRole('checkbox', { name: 'ท่อช่วยหายใจจำลอง × 2' }));
+    expect(screen.getByText('2,160 บาท (ราคาชิ้นส่วน + 20%)')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการรับคืน' }));
+    const card = screen.getByText('ค่าปรับและค่าชดใช้ไปรอบันทึกชำระในช่องด้านขวา').closest('section')!;
+    expect(within(card).getByText('ขาด ท่อช่วยหายใจจำลอง × 2')).toBeInTheDocument();
+    expect(within(card).getByText('2,160 บาท')).toBeInTheDocument();
+    expect(within(card).getByText('ชิ้นส่วนไม่ครบ', { selector: '.chip' })).toBeInTheDocument();
+  });
+});

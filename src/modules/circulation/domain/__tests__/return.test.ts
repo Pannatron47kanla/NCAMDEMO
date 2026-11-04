@@ -67,3 +67,25 @@ describe('late return', () => {
     expect(outcome.charges.map((c) => c.amount)).toEqual([30]);
   });
 });
+
+describe('return with missing parts', () => {
+  const missingBags = [parts[0]!, { ...parts[1]!, checked: false }];
+
+  it('AC18: a missing part of qty 2 and price 100 charges round(200 x 1.2) = 240 and the asset becomes ชิ้นส่วนไม่ครบ', () => {
+    const outcome = loan({ due: today }).receiveReturn(input({ parts: missingBags }), DEFAULT_LOAN_SETTINGS, today);
+    expect(outcome.assetStatus).toBe('ชิ้นส่วนไม่ครบ');
+    expect(outcome.missingText).toBe('ขาด ถุงลม × 2');
+    expect(outcome.charges).toEqual([{ kind: 'loss', desc: 'ค่าชดใช้: ถุงลม × 2 (ราคา + 20%)', amount: 240 }]);
+  });
+
+  it('AC18: lossPct 50 gives 300, and the fine and the loss are both charged when late', () => {
+    const outcome = loan().receiveReturn(input({ parts: missingBags }), { ...DEFAULT_LOAN_SETTINGS, lossPct: 50 }, today);
+    expect(outcome.charges.map((c) => [c.kind, c.amount])).toEqual([['fine', 15], ['loss', 300]]);
+  });
+
+  it('AC18: a missing part priced 0 makes the status ชิ้นส่วนไม่ครบ but charges nothing', () => {
+    const outcome = loan({ due: today }).receiveReturn(input({ parts: [{ ...parts[0]!, checked: false }, parts[1]!] }), DEFAULT_LOAN_SETTINGS, today);
+    expect(outcome.assetStatus).toBe('ชิ้นส่วนไม่ครบ');
+    expect(outcome.charges).toEqual([]);
+  });
+});

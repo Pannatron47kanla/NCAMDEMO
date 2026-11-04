@@ -61,13 +61,14 @@ export class Loan {
   /** The asset comes back. Throws `NO_OPEN_LOAN` when this loan has no open item for it. */
   receiveReturn(input: ReturnInput, settings: LoanSettings, now: Date): ReturnOutcome {
     if (!this.props.items.some((i) => i.assetId === input.assetId && !i.returned)) throw new DomainError('NO_OPEN_LOAN', { name: input.assetName });
-    const { lateDays, fine } = this.quoteReturn(input.parts, settings, now);
+    const { lateDays, fine, loss } = this.quoteReturn(input.parts, settings, now);
     const charges: ChargeDraft[] = [];
     if (fine > 0) charges.push({ kind: 'fine', desc: 'ค่าปรับคืนช้า ' + lateDays + ' วัน · ' + input.assetName, amount: fine });
     const missing = input.parts.filter((p) => !p.checked);
     const missingText = missing.length ? 'ขาด ' + missing.map((p) => p.name + ' × ' + p.qty).join(', ') : 'ครบทุกชิ้น';
+    if (loss > 0) charges.push({ kind: 'loss', desc: 'ค่าชดใช้: ' + missingText.replace('ขาด ', '') + ' (ราคา + ' + settings.lossPct + '%)', amount: loss });
     const loan = new Loan({ ...this.props, items: this.props.items.map((i) => (i.assetId === input.assetId ? { ...i, returned: true } : { ...i })) });
-    return { assetStatus: 'พร้อมใช้', charges, needsRepair: false, missingText, lateDays, loan };
+    return { assetStatus: missing.length ? 'ชิ้นส่วนไม่ครบ' : 'พร้อมใช้', charges, needsRepair: false, missingText, lateDays, loan };
   }
 
   openItems(): LoanItem[] {

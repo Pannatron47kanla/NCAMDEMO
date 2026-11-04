@@ -103,3 +103,21 @@ describe('counter late return', () => {
     expect(env.circulation.charges.get().map((c) => c.amount)).toEqual([30]);
   });
 });
+
+describe('counter return with missing parts', () => {
+  it('AC18: unticking a part charges its price plus 20%, sets ชิ้นส่วนไม่ครบ and records what is missing', () => {
+    const env = setup();
+    const { counter, registry, circulation, state } = env;
+    lend(env, 'A10');
+    counter.scan(registry.catalog.findById('A10')!.code);
+    counter.toggleReturnPart(1);
+    expect(state().ret!.parts.map((p) => p.checked)).toEqual([true, false]);
+    counter.confirmReturn();
+    expect(registry.catalog.findById('A10')!.status).toBe('ชิ้นส่วนไม่ครบ');
+    expect(circulation.charges.get()).toHaveLength(1);
+    expect(circulation.charges.get()[0]).toMatchObject({ borrowerCode: 'T0007', desc: 'ค่าชดใช้: ท่อช่วยหายใจจำลอง × 2 (ราคา + 20%)', amount: 2160 });
+    expect(state().retDone).toMatchObject({ missText: 'ขาด ท่อช่วยหายใจจำลอง × 2', fine: 0, loss: 2160, status: 'ชิ้นส่วนไม่ครบ' });
+    const events = registry.catalog.findById('A10')!.events;
+    expect(events[events.length - 1]!.text).toBe('รับคืนจาก อ.ดร.สุภาวดี วงศ์ใหญ่ ตรงเวลา · ขาด ท่อช่วยหายใจจำลอง × 2');
+  });
+});
