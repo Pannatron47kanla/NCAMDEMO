@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Login } from './Login';
+import type { AppModules } from './modules';
 import { INITIAL_NAV_OPEN, type NavGroup, type NavOpen } from './nav';
 import { ROLES } from './roles';
 import { Shell } from './Shell';
@@ -22,7 +23,7 @@ function Frame({ children }: { children: ReactNode }) {
   );
 }
 
-export function App() {
+export function App({ modules }: { modules: AppModules }) {
   const [loginRole, setLoginRole] = useState(ROLES[0] ?? '');
   const [role, setRole] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState<NavOpen>(INITIAL_NAV_OPEN);
@@ -32,7 +33,7 @@ export function App() {
     <Frame>
       {role === null
         ? <Login role={loginRole} onRole={setLoginRole} onLogin={() => setRole(loginRole)} />
-        : <Shell role={role} navOpen={navOpen} onToggleGroup={toggleGroup} onLogout={() => setRole(null)} />}
+        : <Shell modules={modules} role={role} navOpen={navOpen} onToggleGroup={toggleGroup} onLogout={() => setRole(null)} />}
     </Frame>
   );
 }

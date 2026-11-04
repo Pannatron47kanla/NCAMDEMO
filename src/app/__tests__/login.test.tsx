@@ -2,7 +2,9 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { systemClock } from '../../shared/clock';
 import { App } from '../App';
+import { createAppModules } from '../modules';
 
 const ROLES = ['เจ้าหน้าที่ห้องปฏิบัติการ', 'เจ้าหน้าที่พัสดุ', 'กรรมการตรวจสอบพัสดุ', 'ผู้บริหาร', 'ผู้ดูแลระบบ'];
 
@@ -15,7 +17,7 @@ const NAV_BUTTONS = [
 
 async function signIn(role: string) {
   const user = userEvent.setup();
-  render(<App />);
+  render(<App modules={createAppModules(systemClock)} />);
   await user.selectOptions(screen.getByLabelText('บทบาท (สำหรับสาธิต)'), role);
   await user.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
   return user;
@@ -23,7 +25,7 @@ async function signIn(role: string) {
 
 describe('login and shell', () => {
   it('AC3: the app opens on the login screen with the five roles', () => {
-    render(<App />);
+    render(<App modules={createAppModules(systemClock)} />);
     const select = screen.getByLabelText('บทบาท (สำหรับสาธิต)');
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(ROLES);
     expect(screen.queryByRole('navigation')).toBeNull();

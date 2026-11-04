@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { buildNav, CHEV_DOWN, CHEV_UP, NAV_ICONS, screenLabel, type NavEntry, type NavGroup, type NavOpen } from './nav';
 import { START_SCREEN, type Navigation, type ScreenKey, type ScreenParams } from './navigation';
+import type { AppModules } from './modules';
 import { SCREENS, type ScreenContext } from './screens';
 
 interface Props {
+  modules: AppModules;
   role: string;
   navOpen: NavOpen;
   onToggleGroup(group: NavGroup): void;
@@ -64,10 +66,10 @@ function Placeholder({ screen }: { screen: ScreenKey }) {
 }
 
 // App shell: mockup lines 375-391 (menu) and 393 (main area).
-export function Shell({ role, navOpen, onToggleGroup, onLogout }: Props) {
+export function Shell({ modules, role, navOpen, onToggleGroup, onLogout }: Props) {
   const [nav, setNav] = useState<Navigation>(START_SCREEN);
   const go = (screen: ScreenKey, params: ScreenParams = {}) => setNav({ screen, params });
-  const ctx: ScreenContext = { params: nav.params, go };
+  const ctx: ScreenContext = { modules, params: nav.params, go };
   const render = SCREENS[nav.screen];
 
   return (
