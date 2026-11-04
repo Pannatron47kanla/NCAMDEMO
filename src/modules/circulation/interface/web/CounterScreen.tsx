@@ -51,11 +51,20 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip }: Counter
 
   let chips: Chip[] = [];
   if (isBorrow && !c.borrowerCode) chips = borrowers.map((b) => ({ code: b.code, sub: b.name }));
-  else if (isBorrow && !c.blocked) {
+  else if (isBorrow && !c.done && !c.blocked) {
     chips = SAMPLE_ASSETS.flatMap((id) => {
       const a = assets.find((x) => x.id === id);
       return a ? [{ code: a.code, sub: a.name.replace(/ \(.*\)/, '') + ' · ' + a.status }] : [];
     });
+  } else if (!isBorrow) {
+    // Mockup line 2292: one chip per unreturned item of every open loan.
+    for (const l of loans) {
+      for (const i of l.openItems()) {
+        const a = assets.find((x) => x.id === i.assetId);
+        const who = borrowers.find((b) => b.code === l.borrowerCode);
+        if (a) chips.push({ code: a.code, sub: a.name.replace(/ \(.*\)/, '') + ' · ' + (who?.name ?? '') });
+      }
+    }
   }
 
   const retLoan = c.ret ? loans.find((l) => l.id === c.ret!.loanId) : undefined;
