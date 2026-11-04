@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "intent-layer": {
+      "source": "crafter-station/skills",
+      "sourceType": "github",
+      "skillPath": "skills/intent-layer/SKILL.md",
+      "computedHash": "66967d7ba4bb4d9ced62ef0f97d5cc7e0802ead381e9a0e96d034779fafec336"
+    }
+  }
+}
