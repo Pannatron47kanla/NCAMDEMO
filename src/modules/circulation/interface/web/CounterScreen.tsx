@@ -140,7 +140,7 @@ export function CounterScreen({ circulation, assets, now, returnPanel, aside }: 
           </section>
           {isBorrow
             ? <>
-              <BorrowPanel state={c} borrower={borrower} held={borrower ? borrower.kitsHeld(loans) : 0} maxSets={settings.maxSets} overdue={overdue} />
+              <BorrowPanel state={c} borrower={borrower} held={borrower ? borrower.kitsHeld(loans) : 0} maxSets={settings.maxSets} overdue={overdue} assets={assets} onRemove={(id) => counter.removeFromCart(id)} />
               {c.blocked ? <div><button className="btn" onClick={() => counter.reset()}>รายการใหม่ (สแกนผู้ยืมคนถัดไป)</button></div> : null}
             </>
             : (returnPanel ?? <div className="card" style={{ padding: 20, color: '#46565c' }}>สแกนป้าย QR ของครุภัณฑ์ที่นำมาคืน ระบบจะค้นใบยืมให้เอง</div>)}

@@ -70,4 +70,21 @@ describe('counter screen', () => {
     await user.type(screen.getByRole('textbox'), '9999-999-9999{Enter}');
     expect(screen.getByRole('status')).toHaveTextContent('ไม่พบรหัสครุภัณฑ์ 9999-999-9999');
   });
+
+  it('AC10: a scanned asset appears in the list once; scanning it again shows the duplicate warning; remove empties the list', async () => {
+    const { user, registry } = show();
+    const a = registry.catalog.findById('A1')!;
+    await user.click(screen.getByRole('button', { name: /T0007/ }));
+    expect(screen.getByText('ยังไม่มีรายการ สแกนป้าย QR ครุภัณฑ์เพื่อเพิ่มลงรายการที่จะจ่าย')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox'), `${a.code}{Enter}`);
+    expect(screen.getByRole('status')).toHaveTextContent('เพิ่ม ' + a.name);
+    expect(screen.getByText('รายการที่จะจ่าย')).toBeInTheDocument();
+    expect(screen.getByText('1 รายการ')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox'), `${a.code}{Enter}`);
+    expect(screen.getByRole('status')).toHaveTextContent('สแกนซ้ำ: ' + a.name + ' อยู่ในรายการแล้ว ไม่เพิ่มซ้ำ');
+    expect(screen.getByText('1 รายการ')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'เอาออก' }));
+    expect(screen.getByRole('status')).toHaveTextContent('เอา ' + a.name + ' ออกจากรายการ');
+    expect(screen.getByText('ยังไม่มีรายการ สแกนป้าย QR ครุภัณฑ์เพื่อเพิ่มลงรายการที่จะจ่าย')).toBeInTheDocument();
+  });
 });

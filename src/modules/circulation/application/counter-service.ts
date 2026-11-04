@@ -1,7 +1,7 @@
 import type { Clock } from '../../../shared/clock';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
-import type { CartItem } from '../domain/cart';
+import { cartItemFor, isInCart, type CartItem } from '../domain/cart';
 import type { BorrowerRepository, LoanRepository } from '../domain/repositories';
 import type { LoanSettings } from '../domain/loan-settings';
 import type { AssetsPort } from './ports';
@@ -50,6 +50,11 @@ export class CounterService {
     else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [] });
   }
 
+  removeFromCart(assetId: string): void {
+    const name = this.deps.assets.findById(assetId)?.name ?? assetId;
+    this.patch({ cart: this.state.get().cart.filter((it) => it.assetId !== assetId), msg: { kind: 'warn', code: 'ITEM_REMOVED', params: { name } } });
+  }
+
   /** Clears the borrower and cart for the next person. */
   reset(): void {
     this.patch({ scan: '', borrowerCode: '', blocked: false, cart: [], msg: null });
@@ -80,6 +85,11 @@ export class CounterService {
     if (c.blocked) return this.refuse('BORROWER_BLOCKED');
     const asset = this.deps.assets.findByCode(code);
     if (!asset) return this.refuse('ASSET_NOT_FOUND', { code });
+    if (isInCart(c.cart, asset)) {
+      this.patch({ scan: '', msg: { kind: 'warn', code: 'ALREADY_IN_CART', params: { name: asset.name } } });
+      return;
+    }
+    this.patch({ scan: '', cart: c.cart.concat([cartItemFor(asset)]), msg: { kind: 'ok', code: 'ITEM_ADDED', params: { name: asset.name } } });
   }
 
   /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */

@@ -78,3 +78,28 @@ describe('counter asset lookup', () => {
     expect(state().cart).toEqual([]);
   });
 });
+
+describe('counter cart', () => {
+  it('AC10: scanning an available asset adds it; scanning it again warns ALREADY_IN_CART and keeps one item', () => {
+    const { counter, registry, state } = setup();
+    const a = registry.catalog.findById('A1')!;
+    counter.scan('T0007');
+    counter.scan(a.code);
+    expect(state().cart.map((it) => it.assetId)).toEqual(['A1']);
+    expect(state().msg).toEqual({ kind: 'ok', code: 'ITEM_ADDED', params: { name: a.name } });
+    counter.scan(` ${a.code} `);
+    expect(state().cart).toHaveLength(1);
+    expect(state().msg).toEqual({ kind: 'warn', code: 'ALREADY_IN_CART', params: { name: a.name } });
+    expect(state().scan).toBe('');
+  });
+
+  it('AC10: removing an item takes it out of the cart and warns', () => {
+    const { counter, registry, state } = setup();
+    const a = registry.catalog.findById('A1')!;
+    counter.scan('T0007');
+    counter.scan(a.code);
+    counter.removeFromCart('A1');
+    expect(state().cart).toEqual([]);
+    expect(state().msg).toEqual({ kind: 'warn', code: 'ITEM_REMOVED', params: { name: a.name } });
+  });
+});
