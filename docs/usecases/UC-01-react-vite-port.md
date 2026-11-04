@@ -1,6 +1,6 @@
 # UC-01 Port the NCAM MVP mockup to React + Vite
 
-Status: draft, waiting for review. Source of behavior: `Mockup MVP NCAM_1.html`. Thai strings below are the exact text the app must show.
+Status: draft, waiting for review. Source of behavior: `docs/mockup/Mockup MVP NCAM_1.html`, with readable source in `docs/mockup/source/`. Thai strings below are the exact text the app must show.
 
 ## Users
 
@@ -129,20 +129,10 @@ All numbers come from the mockup and must not change in this port.
 - Data persistence across reloads, and sharing data between users.
 - New features or changes to rules. Mockup quirks are kept and noted, not fixed.
 
-## Open questions
+## Decisions
 
-1. The link will be public unless Vercel access protection is turned on, and the login does not check anything. Are the people's names in the seed fictional and safe to publish?
-2. `interface/http` does not fit a frontend. Can the UI layer be named `interface/web`?
-3. This story has 44 ACs, above the team's guideline of about 7. Should it stay as one story and PR, or split into the slices in `docs/backlog/UC-01-react-vite-port.md`?
-
-## Proposed contexts (needs approval before `docs/architecture/context-map.md` changes)
-
-| Context | Level | Covers |
-|---|---|---|
-| registry | light | Assets, parts, rooms, add asset, import, room scan, life and calibration |
-| circulation | full | Borrowers, loans, returns, charges, loan settings |
-| maintenance | light | Repair tickets |
-| audit | light | Annual audit rounds and results |
-| disposal | full | Disposal cases, methods, and deadlines |
-
-Dashboard, calendar, map, reports, and documents read from these contexts through their `index.ts`, so they are app-level views and not contexts.
+- The people's names in the seed are fictional, so they can be published on a public link.
+- The UI layer is `interface/web`.
+- Contexts follow `docs/architecture/context-map.md`.
+- This work stays as one Story and one PR, even though 44 ACs is above the team's guideline of about 7.
+- With no database, repositories are in-memory and are tested directly. The rule that repository tests run on a real database applies once a backend exists.

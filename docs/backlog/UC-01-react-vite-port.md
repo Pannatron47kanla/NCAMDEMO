@@ -1,7 +1,7 @@
 # UC-01 backlog
 
 **Summary:** UC-01 Port the NCAM MVP mockup to React + Vite
-**Epic:** NCAM MVP demo · **Component:** registry, circulation, maintenance, audit, disposal (proposed) · **Story points:** ?
+**Epic:** NCAM MVP demo · **Component:** registry, circulation, maintenance, audit, disposal · **Story points:** ?
 
 As a stakeholder of the NCAM asset system,
 I want the MVP mockup running as a React + Vite app on Vercel,
@@ -12,7 +12,7 @@ Business rules and full acceptance criteria: `docs/usecases/UC-01-react-vite-por
 ## Setup
 
 - Setup: scaffold React, Vite, TypeScript, Vitest, ESLint boundaries, and CI
-- Setup: replace the example context map with NCAM contexts, after approval
+- Setup: replace the example context map with NCAM contexts (done)
 
 ## Sub-tasks
 
@@ -36,19 +36,6 @@ There are no `Spec: openapi`, `DB:`, `Infra:` repository, or `HTTP:` tasks, beca
 | App: printable documents | AC42 |
 | E2E: borrow, return, repair, and dispose flow on the production build | AC1, AC13, AC19, AC23, AC38 |
 
-## Proposed slices, if the story is split
-
-Each slice can be demonstrated alone. The shell comes first, and the rest can follow in any order.
-
-| Story | Delivers | ACs |
-|---|---|---|
-| UC-01a | Shell, seed, login, and Vercel deploy | AC1–AC5 |
-| UC-01b | Borrow and return counter | AC6–AC20 |
-| UC-01c | Repair | AC21–AC23 |
-| UC-01d | Register, import, and room scan | AC24–AC30, AC39 |
-| UC-01e | Audit and disposal | AC31–AC38 |
-| UC-01f | Dashboard, reports, settings, calendar, map, and documents | AC40–AC44 |
-
 ## Definition of Ready
 
 | Check | Status |
@@ -56,11 +43,12 @@ Each slice can be demonstrated alone. The shell comes first, and the rest can fo
 | ACs include failure cases | ✅ |
 | Numbers in rules are clear | ✅ |
 | Out of scope is listed | ✅ |
-| Component is set | ❌ Waiting for context approval |
-| Story points are set | ❌ Not provided |
-| No open questions | ❌ 3 open in the use case |
+| Component is set | ✅ |
+| Story points are set | ❌ Not provided, not blocking |
+| No open questions | ✅ |
 
 ## References
 
 - `docs/usecases/UC-01-react-vite-port.md`
-- `Mockup MVP NCAM_1.html` (source of behavior)
+- `docs/mockup/Mockup MVP NCAM_1.html` (source of behavior)
+- `docs/mockup/source/prototype.dc.html` (readable source unpacked from the mockup)
