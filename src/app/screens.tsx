@@ -9,6 +9,7 @@ import { CalendarScreen } from './calendar/CalendarScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import { PrintScreen } from './documents/PrintScreen';
 import { MapScreen } from './map/MapScreen';
+import { ReportsScreen } from './reports/ReportsScreen';
 import { SettingsScreen } from '../modules/circulation';
 import type { AppModules } from './modules';
 import type { ScreenKey, ScreenParams } from './navigation';
@@ -27,7 +28,7 @@ export type ScreenRenderer = (ctx: ScreenContext) => ReactNode;
  * A key with no entry shows a placeholder in the Shell, so the menu always works.
  */
 export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
-  dash: () => <DashboardScreen />,
+  dash: (ctx) => <DashboardScreen {...ctx} />,
   asset: (ctx) => <AssetScreen {...ctx} />,
   counter: (ctx) => <CounterScreen {...ctx} />,
   repair: (ctx) => <RepairScreen {...ctx} />,
@@ -40,6 +41,7 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   map: (ctx) => <MapScreen {...ctx} />,
   print: (ctx) => <PrintScreen {...ctx} />,
   cal: (ctx) => <CalendarScreen {...ctx} />,
+  reports: (ctx) => <ReportsScreen {...ctx} />,
   settings: (ctx) => <SettingsScreen circulation={ctx.modules.circulation} />,
 };
 
