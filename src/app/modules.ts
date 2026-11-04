@@ -1,4 +1,5 @@
 import type { Clock } from '../shared/clock';
+import { createAuditModule, type AuditModule } from '../modules/audit';
 import { createCirculationModule, type CirculationModule } from '../modules/circulation';
 import { createMaintenanceModule, type MaintenanceModule } from '../modules/maintenance';
 import { createRegistryModule, type RegistryModule } from '../modules/registry';
@@ -9,6 +10,7 @@ export interface AppModules {
   registry: RegistryModule;
   maintenance: MaintenanceModule;
   circulation: CirculationModule;
+  audit: AuditModule;
 }
 
 /**
@@ -23,5 +25,6 @@ export function createAppModules(clock: Clock): AppModules {
   const registry = createRegistryModule(clock);
   const maintenance = createMaintenanceModule(clock, { assets: registry.catalog });
   const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: maintenance.repairs });
-  return { clock, registry, maintenance, circulation };
+  const audit = createAuditModule(clock, { assets: registry.catalog });
+  return { clock, registry, maintenance, circulation, audit };
 }
