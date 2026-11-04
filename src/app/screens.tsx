@@ -9,6 +9,7 @@ import { CalendarScreen } from './calendar/CalendarScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import { PrintScreen } from './documents/PrintScreen';
 import { MapScreen } from './map/MapScreen';
+import { SettingsScreen } from '../modules/circulation';
 import type { AppModules } from './modules';
 import type { ScreenKey, ScreenParams } from './navigation';
 
@@ -39,6 +40,7 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   map: (ctx) => <MapScreen {...ctx} />,
   print: (ctx) => <PrintScreen {...ctx} />,
   cal: (ctx) => <CalendarScreen {...ctx} />,
+  settings: (ctx) => <SettingsScreen circulation={ctx.modules.circulation} />,
 };
 
 /**

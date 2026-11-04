@@ -2,6 +2,7 @@ import type { Clock } from '../../shared/clock';
 import { createStore, type Store } from '../../shared/store';
 import { ChargeService } from './application/charge-service';
 import { CounterService } from './application/counter-service';
+import { SettingsService } from './application/settings-service';
 import type { AssetsPort, RepairIntake } from './application/ports';
 import type { Borrower } from './domain/borrower';
 import { DEFAULT_LOAN_SETTINGS, type LoanSettings } from './domain/loan-settings';
@@ -23,6 +24,8 @@ export interface CirculationModule {
   charges: Store<Charge[]>;
   borrowers: Store<Borrower[]>;
   settings: Store<LoanSettings>;
+  /** The settings form: unsaved edits and saving. */
+  settingsDesk: SettingsService;
 }
 
 /** Builds circulation from the seed. Every call gives a separate, fresh copy. */
@@ -40,5 +43,5 @@ export function createCirculationModule(clock: Clock, ports: CirculationPorts): 
     assets: ports.assets,
     repairs: ports.repairs,
   });
-  return { counter, cashier: new ChargeService(chargeRepository), loans, charges, borrowers, settings };
+  return { counter, cashier: new ChargeService(chargeRepository), loans, charges, borrowers, settings, settingsDesk: new SettingsService(settings) };
 }

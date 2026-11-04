@@ -6,3 +6,5 @@ export { holderText } from './interface/web/holder';
 export type { Borrower } from './domain/borrower';
 export type { Loan, LoanItem } from './domain/loan';
 export type { LoanSettings } from './domain/loan-settings';
+export { SettingsScreen, type SettingsScreenProps } from './interface/web/SettingsScreen';
+export { normalizeSettings, DEFAULT_LOAN_SETTINGS, type SettingsDraft } from './domain/loan-settings';
