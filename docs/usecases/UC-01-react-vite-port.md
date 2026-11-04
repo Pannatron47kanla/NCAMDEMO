@@ -1,6 +1,6 @@
 # UC-01 Port the NCAM MVP mockup to React + Vite
 
-Status: draft, waiting for review. Source of behavior: `docs/mockup/Mockup MVP NCAM_1.html`, with readable source in `docs/mockup/source/`. Thai strings below are the exact text the app must show.
+Status: implemented on this branch, waiting for PR review. Source of behavior: `docs/mockup/Mockup MVP NCAM_1.html`, with readable source in `docs/mockup/source/`. Thai strings below are the exact text the app must show.
 
 ## Users
 
