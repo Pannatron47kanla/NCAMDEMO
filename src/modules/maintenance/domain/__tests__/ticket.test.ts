@@ -25,3 +25,32 @@ describe('a reported ticket', () => {
     expect(t.createdAt).toEqual(NOW);
   });
 });
+
+describe('accepting and closing', () => {
+  const open = () => RepairTicket.open(input('x'));
+
+  it('AC23: accept sets กำลังซ่อม with the route and keeps the rest', () => {
+    const t = open().accept('ซ่อมภายใน');
+    expect(t).toMatchObject({ status: 'กำลังซ่อม', route: 'ซ่อมภายใน', symptom: 'x', id: 'WO-2569-032' });
+  });
+
+  it('AC23: close throws TICKET_NOT_READY until both tested and partsOk are ticked', () => {
+    const code = (t: RepairTicket) => { try { t.close(); } catch (e) { return (e as DomainError).code; } return 'closed'; };
+    const working = open().accept('ซ่อมภายใน');
+    expect(code(working)).toBe('TICKET_NOT_READY');
+    expect(code(working.toggleTested())).toBe('TICKET_NOT_READY');
+    expect(code(working.toggleParts())).toBe('TICKET_NOT_READY');
+    expect(code(working.toggleTested().toggleParts())).toBe('closed');
+    expect(code(working.toggleTested().toggleTested().toggleParts())).toBe('TICKET_NOT_READY');
+  });
+
+  it('AC23: closing a ready ticket gives ปิดงาน', () => {
+    expect(open().accept('ซ่อมภายใน').toggleTested().toggleParts().close().status).toBe('ปิดงาน');
+  });
+
+  it('AC23: the cost keeps digits only and counts as 0 when empty', () => {
+    expect(open().withCost('1,2a50').cost).toBe('1250');
+    expect(open().withCost('1,2a50').costAmount).toBe(1250);
+    expect(open().costAmount).toBe(0);
+  });
+});

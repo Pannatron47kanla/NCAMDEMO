@@ -1,11 +1,13 @@
 import type { FormEvent, KeyboardEvent } from 'react';
 import { useEffect } from 'react';
-import { th } from '../../../../shared/dates';
+import { iso, th, thd } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
+import { baht } from '../../../../shared/money';
 import { chip } from '../../../../shared/web/chip';
 import { useStore } from '../../../../shared/web/useStore';
 import type { Asset } from '../../../registry';
 import type { MaintenanceModule } from '../../module';
+import { messageText } from './messages';
 
 export interface RepairScreenProps {
   maintenance: MaintenanceModule;
@@ -31,6 +33,21 @@ export function RepairScreen({ maintenance, assets, now, repairAssetId }: Repair
   const formAsset = assets.find((a) => a.id === form.assetId);
   const noSubmit = !form.symptom.trim();
   const rows = tickets.slice().reverse();
+
+  const sel = tickets.find((t) => t.id === form.selTicket);
+  const selAsset = sel ? assets.find((a) => a.id === sel.assetId) : undefined;
+  const warranty = selAsset ? iso(selAsset.warranty) : null;
+  const inWarranty = !!(warranty && warranty.getTime() >= now.getTime());
+
+  const accept = (route: string) => sel && desk.accept(sel.id, route);
+  const close = () => {
+    if (!sel) return;
+    try {
+      desk.close(sel.id);
+    } catch (err) {
+      if (!(err instanceof DomainError)) throw err;
+    }
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -85,6 +102,43 @@ export function RepairScreen({ maintenance, assets, now, repairAssetId }: Repair
             </table>
           </section>
         </div>
+        {sel && selAsset && (
+          <section className="card" style={{ flex: '2 1 400px', minWidth: 0, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <h2 className="h3 mono" style={{ marginRight: 'auto' }}>{sel.id}</h2>
+              <span className="chip" style={chip(sel.status)}>{sel.status}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 150px) minmax(0, 1fr)', gap: '6px 16px' }}>
+              <div className="lbl">ครุภัณฑ์</div><div>{selAsset.name} <span className="mono" style={{ color: '#56666d' }}>{selAsset.code}</span></div>
+              <div className="lbl">อาการ</div><div>{sel.symptom}</div>
+              <div className="lbl">ผู้แจ้ง</div><div>{sel.reporter} · {thd(sel.createdAt)}</div>
+              <div className="lbl">ต้องใช้สอน</div><div>{thd(sel.needDate)}</div>
+              <div className="lbl">ประกัน</div>
+              <div><span className="chip" style={chip(inWarranty ? 'อยู่ในประกัน' : 'หมดประกัน')}>{inWarranty && warranty ? 'อยู่ในประกันถึง ' + thd(warranty) + ' ควรเคลมผู้ขายก่อนซ่อมเอง' : 'นอกประกัน'}</span></div>
+              <div className="lbl">ช่องทางซ่อม</div><div>{sel.route}</div>
+            </div>
+            {sel.status === 'รอรับงาน' && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 8, borderTop: '1px solid #edf1f2' }}>
+                {inWarranty && <button className="btn pri" onClick={() => accept('เคลมประกันผู้ขาย')}>รับงาน: เคลมประกันผู้ขาย</button>}
+                <button className="btn" onClick={() => accept('ซ่อมภายใน')}>รับงาน: ซ่อมภายใน</button>
+                <button className="btn" onClick={() => accept('ส่งซ่อมภายนอก')}>รับงาน: ส่งซ่อมภายนอก</button>
+              </div>
+            )}
+            {sel.status === 'กำลังซ่อม' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid #edf1f2' }}>
+                <label htmlFor="tk-cost" className="lbl">ค่าใช้จ่าย (บาท)</label>
+                <input id="tk-cost" className="inp" style={{ maxWidth: 200 }} inputMode="numeric" placeholder="0" value={sel.cost} onChange={(e) => desk.setCost(sel.id, e.target.value)} />
+                <label htmlFor="tk-test" style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}><input id="tk-test" type="checkbox" checked={sel.tested} onChange={() => desk.toggleTested(sel.id)} /> ทดสอบการใช้งานผ่าน</label>
+                <label htmlFor="tk-parts" style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}><input id="tk-parts" type="checkbox" checked={sel.partsOk} onChange={() => desk.toggleParts(sel.id)} /> ตรวจชิ้นส่วนครบชุด</label>
+                <div><button className="btn pri" disabled={!sel.readyToClose} onClick={close}>ปิดงาน ส่งคืนใช้งาน</button></div>
+                <div className="lbl">{messageText('TICKET_NOT_READY')}</div>
+              </div>
+            )}
+            {sel.status === 'ปิดงาน' && (
+              <div style={{ padding: '10px 12px', borderRadius: 6, background: '#e3f2ee', color: '#0b5e57' }}>ปิดงานแล้ว ครุภัณฑ์กลับเป็น "พร้อมใช้" {sel.costAmount ? '· ค่าใช้จ่าย ' + baht(sel.costAmount) : ''}</div>
+            )}
+          </section>
+        )}
       </div>
     </>
   );

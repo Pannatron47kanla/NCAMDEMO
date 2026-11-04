@@ -1,4 +1,5 @@
 import type { Clock } from '../../../shared/clock';
+import { baht } from '../../../shared/money';
 import { addDays, th } from '../../../shared/dates';
 import { createStore, type Store } from '../../../shared/store';
 import type { TicketRepository } from '../domain/repositories';
@@ -79,5 +80,37 @@ export class RepairService implements RepairIntake, OpenRepairs {
     if (asset.status !== 'ถูกยืม') this.assets.setStatus(asset.id, 'รอซ่อม');
     this.assets.addEvent(asset.id, { date: th(now, 0), text: 'แจ้งซ่อม: ' + ticket.symptom, doc: ticket.id });
     this.patch({ selTicket: ticket.id, symptom: '' });
+  }
+
+  private change(id: string, edit: (t: RepairTicket) => RepairTicket): RepairTicket | undefined {
+    const ticket = this.tickets.findById(id);
+    if (!ticket) return undefined;
+    const next = edit(ticket);
+    this.tickets.save(next);
+    return next;
+  }
+
+  /** Takes the work on by `route` (เคลมประกันผู้ขาย, ซ่อมภายใน or ส่งซ่อมภายนอก) and logs it on the asset. */
+  accept(id: string, route: string): void {
+    const t = this.change(id, (x) => x.accept(route));
+    if (t) this.assets.addEvent(t.assetId, { date: th(this.clock.now(), 0), text: 'รับงานซ่อม: ' + route, doc: t.id });
+  }
+
+  setCost(id: string, typed: string): void { this.change(id, (t) => t.withCost(typed)); }
+  toggleTested(id: string): void { this.change(id, (t) => t.toggleTested()); }
+  toggleParts(id: string): void { this.change(id, (t) => t.toggleParts()); }
+
+  /**
+   * Closes the ticket and returns the asset to พร้อมใช้, even if it is ถูกยืม (as the mockup does).
+   * Throws TICKET_NOT_READY, changing nothing, until testing passed and the parts are complete.
+   */
+  close(id: string): void {
+    const t = this.change(id, (x) => x.close());
+    if (!t) return;
+    this.assets.setStatus(t.assetId, 'พร้อมใช้');
+    const cost = t.costAmount;
+    this.assets.addEvent(t.assetId, {
+      date: th(this.clock.now(), 0), text: 'ซ่อมเสร็จ ทดสอบผ่าน ชิ้นส่วนครบ ปิดใบงาน' + (cost ? ' · ค่าใช้จ่าย ' + baht(cost) : ''), doc: t.id,
+    });
   }
 }

@@ -81,3 +81,49 @@ describe('repair intake for other contexts', () => {
     expect(desk.hasOpenTicket('A1')).toBe(false);
   });
 });
+
+describe('accepting and closing a ticket', () => {
+  function report() {
+    const env = setup();
+    env.desk.setAsset('A3');
+    env.desk.setSymptom('หุ่นไม่ส่งสัญญาณ');
+    env.desk.submit();
+    return { ...env, id: 'WO-2569-032' };
+  }
+  const closeError = (desk: ReturnType<typeof setup>['desk'], id: string) => {
+    try { desk.close(id); } catch (e) { return (e as DomainError).code; }
+    return undefined;
+  };
+
+  it('AC23: accept sets กำลังซ่อม with the route and logs รับงานซ่อม on the asset', () => {
+    const { desk, tickets, registry, id } = report();
+    desk.accept(id, 'ส่งซ่อมภายนอก');
+    expect(tickets().find((t) => t.id === id)).toMatchObject({ status: 'กำลังซ่อม', route: 'ส่งซ่อมภายนอก' });
+    expect(registry.catalog.findById('A3')!.events.at(-1)).toEqual({ date: '28 ต.ค. 69', text: 'รับงานซ่อม: ส่งซ่อมภายนอก', doc: id });
+  });
+
+  it('AC23: close throws TICKET_NOT_READY and changes nothing until tested and parts are ticked, then closes and frees the asset', () => {
+    const { desk, tickets, registry, id } = report();
+    desk.accept(id, 'ซ่อมภายใน');
+    expect(closeError(desk, id)).toBe('TICKET_NOT_READY');
+    desk.toggleTested(id);
+    expect(closeError(desk, id)).toBe('TICKET_NOT_READY');
+    expect(registry.catalog.findById('A3')!.status).toBe('รอซ่อม');
+    desk.toggleParts(id);
+    desk.close(id);
+    expect(tickets().find((t) => t.id === id)!.status).toBe('ปิดงาน');
+    expect(registry.catalog.findById('A3')!.status).toBe('พร้อมใช้');
+    expect(registry.catalog.findById('A3')!.events.at(-1)!.text).toBe('ซ่อมเสร็จ ทดสอบผ่าน ชิ้นส่วนครบ ปิดใบงาน');
+    expect(desk.hasOpenTicket('A3')).toBe(false);
+  });
+
+  it('AC23: a typed cost shows in the closing history line', () => {
+    const { desk, registry, id } = report();
+    desk.accept(id, 'ซ่อมภายใน');
+    desk.setCost(id, '1,500 บาท');
+    desk.toggleTested(id);
+    desk.toggleParts(id);
+    desk.close(id);
+    expect(registry.catalog.findById('A3')!.events.at(-1)!.text).toBe('ซ่อมเสร็จ ทดสอบผ่าน ชิ้นส่วนครบ ปิดใบงาน · ค่าใช้จ่าย 1,500 บาท');
+  });
+});

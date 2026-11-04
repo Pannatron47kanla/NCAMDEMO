@@ -47,6 +47,35 @@ export class RepairTicket implements TicketData {
     return new RepairTicket({ ...data });
   }
 
+  private with(patch: Partial<TicketData>): RepairTicket {
+    return new RepairTicket({ ...this.data, ...patch });
+  }
+
+  /** The work is taken on by this route (e.g. ซ่อมภายใน). */
+  accept(route: string): RepairTicket {
+    return this.with({ status: 'กำลังซ่อม', route });
+  }
+
+  /** Keeps only the digits of what was typed, as the mockup's cost box does. */
+  withCost(typed: string): RepairTicket {
+    return this.with({ cost: typed.replace(/[^0-9]/g, '') });
+  }
+
+  toggleTested(): RepairTicket { return this.with({ tested: !this.data.tested }); }
+  toggleParts(): RepairTicket { return this.with({ partsOk: !this.data.partsOk }); }
+
+  /** True once testing passed and the parts are complete. */
+  get readyToClose(): boolean { return this.data.tested && this.data.partsOk; }
+
+  /** The cost as a number; 0 when empty. */
+  get costAmount(): number { return parseInt(this.data.cost, 10) || 0; }
+
+  /** Closes the work order. Throws TICKET_NOT_READY until both testing and parts are ticked (AC23). */
+  close(): RepairTicket {
+    if (!this.readyToClose) throw new DomainError('TICKET_NOT_READY');
+    return this.with({ status: 'ปิดงาน' });
+  }
+
   get id() { return this.data.id; }
   get assetId() { return this.data.assetId; }
   get symptom() { return this.data.symptom; }
