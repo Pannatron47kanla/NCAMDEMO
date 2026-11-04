@@ -52,3 +52,4 @@ There are no `Spec: openapi`, `DB:`, `Infra:` repository, or `HTTP:` tasks, beca
 - `docs/usecases/UC-01-react-vite-port.md`
 - `docs/mockup/Mockup MVP NCAM_1.html` (source of behavior)
 - `docs/mockup/source/prototype.dc.html` (readable source unpacked from the mockup)
+- `docs/plans/UC-01-react-vite-port.md` (implementation plan)
