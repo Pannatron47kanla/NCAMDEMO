@@ -1,5 +1,5 @@
 import type { Clock } from '../../../shared/clock';
-import { th } from '../../../shared/dates';
+import { addDays, th } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
 import { cartItemFor, isInCart, type CartItem, type CartPart } from '../domain/cart';
@@ -8,7 +8,7 @@ import type { BorrowerRepository, ChargeRepository, LoanRepository } from '../do
 import { Charge } from '../domain/charge';
 import type { ChargeDraft, ReturnCondition } from '../domain/return';
 import type { LoanSettings } from '../domain/loan-settings';
-import type { AssetsPort } from './ports';
+import type { AssetsPort, RepairIntake } from './ports';
 
 /** What the counter shows under the scan box. The web layer turns `code` + `params` into Thai text. */
 export interface CounterMessage {
@@ -58,6 +58,7 @@ export interface CounterDeps {
   charges: ChargeRepository;
   settings: Store<LoanSettings>;
   assets: AssetsPort;
+  repairs: RepairIntake;
 }
 
 function amountOf(charges: readonly ChargeDraft[], kind: ChargeDraft['kind']): number {
@@ -216,8 +217,11 @@ export class CounterService {
       this.deps.charges.add(Charge.open({ id: this.deps.charges.nextId(), borrowerCode: borrower.code, desc: draft.desc, amount: draft.amount }));
     }
     this.deps.assets.setStatus(asset.id, out.assetStatus);
-    const text = 'รับคืนจาก ' + borrower.name + (out.lateDays ? ' ช้า ' + out.lateDays + ' วัน' : ' ตรงเวลา') + ' · ' + out.missingText;
+    const text = 'รับคืนจาก ' + borrower.name + (out.lateDays ? ' ช้า ' + out.lateDays + ' วัน' : ' ตรงเวลา') + ' · ' + out.missingText + (out.needsRepair ? ' · สภาพชำรุด ส่งซ่อม' : '');
     this.deps.assets.addEvent(asset.id, { date: th(now, 0), text, doc: loan.id });
+    if (out.needsRepair) {
+      this.deps.repairs.open({ assetId: asset.id, symptom: 'รับคืนในสภาพชำรุด (บันทึกจากเคาน์เตอร์รับคืน)', needDate: addDays(now, 3), reporter: 'เคาน์เตอร์ห้องปฏิบัติการ' });
+    }
     this.patch({
       ret: null, msg: { kind: 'ok', code: 'RETURN_SAVED' },
       retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: amountOf(out.charges, 'fine'), lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: amountOf(out.charges, 'loss'), status: out.assetStatus },

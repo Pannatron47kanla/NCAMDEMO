@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { addDays } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
 import { setup } from './helpers';
 
@@ -119,5 +120,36 @@ describe('counter return with missing parts', () => {
     expect(state().retDone).toMatchObject({ missText: 'ขาด ท่อช่วยหายใจจำลอง × 2', fine: 0, loss: 2160, status: 'ชิ้นส่วนไม่ครบ' });
     const events = registry.catalog.findById('A10')!.events;
     expect(events[events.length - 1]!.text).toBe('รับคืนจาก อ.ดร.สุภาวดี วงศ์ใหญ่ ตรงเวลา · ขาด ท่อช่วยหายใจจำลอง × 2');
+  });
+});
+
+describe('counter damaged return', () => {
+  it('AC19: ชำรุด with a missing part sets รอซ่อม and opens exactly one repair ticket; a second confirm opens none', () => {
+    const env = setup();
+    const { counter, registry, repairs, state } = env;
+    lend(env, 'A10');
+    counter.scan(registry.catalog.findById('A10')!.code);
+    counter.toggleReturnPart(1);
+    counter.setReturnCondition('ชำรุด');
+    expect(state().ret!.cond).toBe('ชำรุด');
+    counter.confirmReturn();
+    expect(registry.catalog.findById('A10')!.status).toBe('รอซ่อม');
+    expect(state().retDone).toMatchObject({ status: 'รอซ่อม', loss: 2160 });
+    expect(repairs.calls).toEqual([{
+      assetId: 'A10', symptom: 'รับคืนในสภาพชำรุด (บันทึกจากเคาน์เตอร์รับคืน)', needDate: addDays(new Date(2026, 9, 28), 3), reporter: 'เคาน์เตอร์ห้องปฏิบัติการ',
+    }]);
+    expect(repairs.tickets.map((t) => t.status)).toEqual(['รอรับงาน']);
+    const events = registry.catalog.findById('A10')!.events;
+    expect(events[events.length - 1]!.text).toBe('รับคืนจาก อ.ดร.สุภาวดี วงศ์ใหญ่ ตรงเวลา · ขาด ท่อช่วยหายใจจำลอง × 2 · สภาพชำรุด ส่งซ่อม');
+    counter.confirmReturn();
+    expect(repairs.calls).toHaveLength(1);
+  });
+
+  it('AC19: a good-condition return opens no ticket', () => {
+    const env = setup();
+    lend(env, 'A1');
+    env.counter.scan(env.registry.catalog.findById('A1')!.code);
+    env.counter.confirmReturn();
+    expect(env.repairs.calls).toEqual([]);
   });
 });

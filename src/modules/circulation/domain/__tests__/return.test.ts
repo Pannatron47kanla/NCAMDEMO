@@ -89,3 +89,18 @@ describe('return with missing parts', () => {
     expect(outcome.charges).toEqual([]);
   });
 });
+
+describe('damaged return', () => {
+  const missingBags = [parts[0]!, { ...parts[1]!, checked: false }];
+
+  it('AC19: ชำรุด makes the status รอซ่อม and asks for a repair, even when parts are missing', () => {
+    const outcome = loan({ due: today }).receiveReturn(input({ condition: 'ชำรุด', parts: missingBags }), DEFAULT_LOAN_SETTINGS, today);
+    expect(outcome.assetStatus).toBe('รอซ่อม');
+    expect(outcome.needsRepair).toBe(true);
+    expect(outcome.charges.map((c) => c.kind)).toEqual(['loss']);
+  });
+
+  it('AC19: สภาพดี never asks for a repair', () => {
+    expect(loan({ due: today }).receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today).needsRepair).toBe(false);
+  });
+});

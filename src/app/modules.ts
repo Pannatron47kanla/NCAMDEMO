@@ -1,5 +1,5 @@
 import type { Clock } from '../shared/clock';
-import { createCirculationModule, type CirculationModule } from '../modules/circulation';
+import { createCirculationModule, type CirculationModule, type RepairIntake } from '../modules/circulation';
 import { createRegistryModule, type RegistryModule } from '../modules/registry';
 
 /** Every context, built from the seed and wired together. */
@@ -7,6 +7,15 @@ export interface AppModules {
   clock: Clock;
   registry: RegistryModule;
   circulation: CirculationModule;
+}
+
+/**
+ * TEMPORARY stand-in for maintenance's repair intake (Group D, Task 22, replaces it): it opens no real
+ * ticket and only numbers them like the mockup (WO-2569-032, ...). Delete it when `maintenance` is wired.
+ */
+function standInRepairIntake(): RepairIntake {
+  let seq = 32;
+  return { open: () => ({ id: 'WO-2569-0' + seq++, status: 'รอรับงาน' }) };
 }
 
 /**
@@ -19,6 +28,6 @@ export interface AppModules {
  */
 export function createAppModules(clock: Clock): AppModules {
   const registry = createRegistryModule();
-  const circulation = createCirculationModule(clock, { assets: registry.catalog });
+  const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: standInRepairIntake() });
   return { clock, registry, circulation };
 }

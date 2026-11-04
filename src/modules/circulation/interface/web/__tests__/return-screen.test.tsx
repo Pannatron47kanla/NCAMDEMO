@@ -11,7 +11,7 @@ import { CounterScreen } from '../CounterScreen';
 function show(lend: string[] = []) {
   const clock = fixedClock(new Date(2026, 9, 28));
   const registry = createRegistryModule();
-  const circulation = createCirculationModule(clock, { assets: registry.catalog });
+  const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: { open: () => ({ id: 'WO-2569-032', status: 'รอรับงาน' }) } });
   if (lend.length) {
     circulation.counter.scan('T0007');
     for (const id of lend) circulation.counter.scan(registry.catalog.findById(id)!.code);
@@ -72,5 +72,17 @@ describe('return panel with missing parts', () => {
     expect(within(card).getByText('ขาด ท่อช่วยหายใจจำลอง × 2')).toBeInTheDocument();
     expect(within(card).getByText('2,160 บาท')).toBeInTheDocument();
     expect(within(card).getByText('ชิ้นส่วนไม่ครบ', { selector: '.chip' })).toBeInTheDocument();
+  });
+});
+
+describe('damaged return panel', () => {
+  it('AC19: choosing ชำรุด and confirming shows the new status รอซ่อม', async () => {
+    const { user, registry } = show(['A1']);
+    await user.click(screen.getByRole('button', { name: 'รับคืน' }));
+    await user.type(screen.getByRole('textbox'), `${registry.catalog.findById('A1')!.code}{Enter}`);
+    await user.selectOptions(screen.getByLabelText('สภาพเมื่อรับคืน'), 'ชำรุด');
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการรับคืน' }));
+    const card = screen.getByText('ค่าปรับและค่าชดใช้ไปรอบันทึกชำระในช่องด้านขวา').closest('section')!;
+    expect(within(card).getByText('รอซ่อม', { selector: '.chip' })).toBeInTheDocument();
   });
 });

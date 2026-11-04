@@ -1,7 +1,7 @@
 import type { Clock } from '../../shared/clock';
 import { createStore, type Store } from '../../shared/store';
 import { CounterService } from './application/counter-service';
-import type { AssetsPort } from './application/ports';
+import type { AssetsPort, RepairIntake } from './application/ports';
 import type { Borrower } from './domain/borrower';
 import { DEFAULT_LOAN_SETTINGS, type LoanSettings } from './domain/loan-settings';
 import type { Charge } from './domain/charge';
@@ -11,6 +11,7 @@ import { SEED_LOAN_SEQ, seedBorrowers, seedLoans } from './infrastructure/seed';
 
 export interface CirculationPorts {
   assets: AssetsPort;
+  repairs: RepairIntake;
 }
 
 export interface CirculationModule {
@@ -34,6 +35,7 @@ export function createCirculationModule(clock: Clock, ports: CirculationPorts): 
     charges: new InMemoryChargeRepository(charges),
     settings,
     assets: ports.assets,
+    repairs: ports.repairs,
   });
   return { counter, loans, charges, borrowers, settings };
 }

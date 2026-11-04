@@ -68,7 +68,7 @@ export class Loan {
     const missingText = missing.length ? 'ขาด ' + missing.map((p) => p.name + ' × ' + p.qty).join(', ') : 'ครบทุกชิ้น';
     if (loss > 0) charges.push({ kind: 'loss', desc: 'ค่าชดใช้: ' + missingText.replace('ขาด ', '') + ' (ราคา + ' + settings.lossPct + '%)', amount: loss });
     const loan = new Loan({ ...this.props, items: this.props.items.map((i) => (i.assetId === input.assetId ? { ...i, returned: true } : { ...i })) });
-    return { assetStatus: missing.length ? 'ชิ้นส่วนไม่ครบ' : 'พร้อมใช้', charges, needsRepair: false, missingText, lateDays, loan };
+    return { assetStatus: input.condition === 'ชำรุด' ? 'รอซ่อม' : (missing.length ? 'ชิ้นส่วนไม่ครบ' : 'พร้อมใช้'), charges, needsRepair: input.condition === 'ชำรุด', missingText, lateDays, loan };
   }
 
   openItems(): LoanItem[] {

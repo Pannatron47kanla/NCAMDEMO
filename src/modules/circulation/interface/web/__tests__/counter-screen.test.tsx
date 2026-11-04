@@ -10,7 +10,7 @@ import { CounterScreen } from '../CounterScreen';
 function show() {
   const clock = fixedClock(new Date(2026, 9, 28));
   const registry = createRegistryModule();
-  const circulation = createCirculationModule(clock, { assets: registry.catalog });
+  const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: { open: () => ({ id: 'WO-2569-032', status: 'รอรับงาน' }) } });
   const onPrintSlip = vi.fn();
   render(<CounterScreen circulation={circulation} assets={registry.assets.get()} now={clock.now()} onPrintSlip={onPrintSlip} />);
   return { circulation, registry, onPrintSlip, user: userEvent.setup() };
