@@ -31,6 +31,8 @@ export const STORE = 'คลังเก็บหุ่นและอุปก�
 export const CLASS = 'ห้องเรียน 205';
 export const SUPPLY = 'ห้องงานพัสดุ';
 export const COUNTER = 'เคาน์เตอร์ยืม-คืน';
+/** The room of an asset that was imported and has not been placed yet. */
+export const PENDING_ROOM = 'รอระบุห้อง';
 
 export const V1 = 'บจ. เมดิคอลเทรนนิ่ง (ตัวอย่าง)';
 export const V2 = 'หจก. สยามเฮลท์ซัพพลาย (ตัวอย่าง)';
