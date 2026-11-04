@@ -26,9 +26,10 @@ export function Icon({ kind, size }: { kind?: string; size?: number }) {
   const px = Number(size) || 28;
   const [bg, fg, title] = ICON_COLORS[k] ?? ICON_COLORS.other!;
   const inner = Math.round(px * 0.62);
+  // The mockup wraps every icon in a block <div class="sc-host">, which adds the line-box height around it.
   return (
-    <span title={title} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxSizing: 'border-box', width: px, height: px, borderRadius: Math.round(px * 0.3), background: bg, border: '1px solid #e3e8ea', color: fg }}>
+    <div><span title={title} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxSizing: 'border-box', width: px, height: px, borderRadius: Math.round(px * 0.3), background: bg, border: '1px solid #e3e8ea', color: fg }}>
       <svg width={inner} height={inner} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{SHAPES[k]}</svg>
-    </span>
+    </span></div>
   );
 }
