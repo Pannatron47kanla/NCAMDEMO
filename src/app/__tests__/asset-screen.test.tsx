@@ -26,4 +26,24 @@ describe('asset detail screen', () => {
     await user.click(screen.getByRole('button', { name: 'แจ้งซ่อม' }));
     expect(go).toHaveBeenLastCalledWith('repair', { repairAssetId: 'A1' });
   });
+
+  it('AC13: a borrowed asset shows who holds it', () => {
+    const modules = createAppModules(fixedClock(new Date(2026, 9, 28)));
+    render(<AssetScreen modules={modules} params={{ selAsset: 'A2' }} go={vi.fn()} />);
+    expect(screen.getByText('ถูกยืมโดย นางสาวกัญญาณัฐ บุญมา · ใบยืม L-2569-0412 · กำหนดคืน 25 ต.ค. 69')).toBeInTheDocument();
+  });
+
+  it('AC13: an asset that is not borrowed shows no holder line, and a pending loan says รออนุมัติ', () => {
+    const modules = createAppModules(fixedClock(new Date(2026, 9, 28)));
+    render(<AssetScreen modules={modules} params={{ selAsset: 'A5' }} go={vi.fn()} />);
+    expect(screen.queryByText(/ถูกยืมโดย/)).not.toBeInTheDocument();
+
+    act(() => {
+      modules.circulation.settings.set((st) => ({ ...st, needApproval: true }));
+      modules.circulation.counter.scan('6611010015');
+      modules.circulation.counter.scan(modules.registry.catalog.findById('A5')!.code);
+      modules.circulation.counter.confirmBorrow();
+    });
+    expect(screen.getByText('ถูกยืมโดย นางสาวพิมพ์ชนก ศรีสุข · ใบยืม L-2569-0413 · กำหนดคืน 4 พ.ย. 69 · รออนุมัติ')).toBeInTheDocument();
+  });
 });
