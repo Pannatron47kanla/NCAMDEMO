@@ -48,6 +48,18 @@ export interface CreateCaseInput {
   hasOpenCase: boolean;
 }
 
+/** What the officer typed to record how the assets were disposed of. */
+export interface ResultInput {
+  /** Price each asset sold for, as typed. Used by the sale methods. */
+  soldPrices: Record<string, string>;
+  buyer: string;
+  receipt: string;
+  /** The other party. Used by the methods that are not a sale. */
+  party: string;
+  /** The reference document. Used by the methods that are not a sale. */
+  ref: string;
+}
+
 export interface CaseState {
   id: string;
   ids: string[];
@@ -154,5 +166,34 @@ export class DisposalCase {
    */
   noBid(): void {
     this.state = { ...this.state, round: this.state.round + 1, announced: false, soldP: {}, buyer: '', receipt: '' };
+  }
+
+  /**
+   * Step 4: records the result (mockup recordResult, line 2102). A sale needs a price for every asset (for an
+   * auction, not below its minimum), a buyer and a receipt number; any other method needs a party and a
+   * reference. Otherwise it throws and changes nothing. Moves to step 4.
+   */
+  recordResult(input: ResultInput): CaseEffect {
+    const s = this.state;
+    const method = METHODS[s.method];
+    const buyer = input.buyer.trim();
+    const receipt = input.receipt.trim();
+    const party = input.party.trim();
+    const ref = input.ref.trim();
+    const sold: Record<string, number> = {};
+    if (method.sale) {
+      s.ids.forEach((id) => { sold[id] = parseInt(input.soldPrices[id] ?? '', 10); });
+      const bad = s.ids.filter((id) => !(sold[id]! > 0) || (s.method === 'auction' && sold[id]! < (s.minP[id] ?? NaN)));
+      if (bad.length) throw new DomainError(s.method === 'auction' ? 'SALE_PRICE_BELOW_MIN' : 'SALE_PRICE_REQUIRED');
+      if (!buyer || !receipt) throw new DomainError('BUYER_RECEIPT_REQUIRED');
+    } else if (!party || !ref) {
+      throw new DomainError('PARTY_REF_REQUIRED', { party: method.partyLabel ?? '' });
+    }
+    this.state = { ...s, step: 4, soldP: method.sale ? sold : s.soldP, buyer: method.sale ? buyer : s.buyer, receipt: method.sale ? receipt : s.receipt, party: method.sale ? s.party : party, ref: method.sale ? s.ref : ref };
+    return {
+      lines: this.lines(this.dates.done, (id) => method.sale
+        ? method.label + ' ให้ ' + buyer + ' ราคา ' + baht(sold[id]!) + ' · ใบเสร็จ ' + receipt
+        : method.label + ': ' + party + ' · ' + ref),
+    };
   }
 }

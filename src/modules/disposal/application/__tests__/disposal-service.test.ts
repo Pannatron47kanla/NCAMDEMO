@@ -130,3 +130,38 @@ describe('a round with no bid', () => {
     expect(t.svc.desk.get().draft.minP).toEqual({ A16: '5000', A17: '12000' });
   });
 });
+
+describe('recording the result', () => {
+  function announcedCase() {
+    const t = setup();
+    t.svc.createCase();
+    t.svc.recordFact();
+    t.svc.approve();
+    t.svc.setMinPrice('A16', '5000');
+    t.svc.setMinPrice('A17', '12000');
+    t.svc.announce();
+    return t;
+  }
+
+  it('AC37: a price below the minimum shows the auction message and leaves the case at step 3', () => {
+    const { svc, disposal } = announcedCase();
+    svc.setSoldPrice('A16', '4000');
+    svc.setSoldPrice('A17', '12000');
+    svc.setBuyer('บจ. ผู้ซื้อ');
+    svc.setReceipt('ร.1/2569');
+    svc.recordResult();
+    expect(svc.desk.get().note?.code).toBe('SALE_PRICE_BELOW_MIN');
+    expect(disposal.current.get()!.data.step).toBe(3);
+  });
+
+  it('AC37: a valid sale moves to step 4 and adds a history line to each asset', () => {
+    const { svc, disposal, asset } = announcedCase();
+    svc.setSoldPrice('A16', '5000');
+    svc.setSoldPrice('A17', '12000');
+    svc.setBuyer(' บจ. ผู้ซื้อ ');
+    svc.setReceipt('ร.1/2569');
+    svc.recordResult();
+    expect(disposal.current.get()!.data.step).toBe(4);
+    expect(asset('A17').events.at(-1)).toEqual({ date: '27 พ.ย. 69', text: 'ขายทอดตลาด ให้ บจ. ผู้ซื้อ ราคา 12,000 บาท · ใบเสร็จ ร.1/2569', doc: 'DS-2569-001' });
+  });
+});

@@ -36,7 +36,8 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
   const note = desk.note;
   const isAuction = current?.data.method === 'auction';
   const dates = current ? current.dates : null;
-  const canSold = !!current && METHODS[current.data.method].sale && (!isAuction || current.data.announced);
+  const sale = !!current && METHODS[current.data.method].sale;
+  const canSold = !!current && sale && (!isAuction || current.data.announced);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15, 30, 36, 0.48)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', boxSizing: 'border-box' }}>
@@ -148,6 +149,12 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
                             <input id={'mn-' + id} className="inp" inputMode="numeric" value={desk.draft.minP[id] ?? ''} onChange={(e) => svc.setMinPrice(id, e.target.value)} disabled={current.data.announced} />
                           </div>
                         )}
+                        {canSold && (
+                          <div className="fld" style={{ flex: '1 1 120px' }}>
+                            <label htmlFor={'sd-' + id} className="lbl">ราคาที่ขายได้ (บาท)</label>
+                            <input id={'sd-' + id} className="inp" inputMode="numeric" value={desk.draft.soldP[id] ?? ''} onChange={(e) => svc.setSoldPrice(id, e.target.value)} />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -158,14 +165,31 @@ export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseD
                     </div>
                   )}
                   {canSold && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {isAuction && (
-                        <>
-                          <button className="btn" onClick={() => onPrint('auction')}>ดูประกาศ</button>
-                          <button className="btn warn" onClick={() => svc.noBid()}>ไม่มีผู้เสนอราคาถึงขั้นต่ำ (A2)</button>
-                        </>
-                      )}
-                    </div>
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                        <div className="fld"><label htmlFor="d-buyer" className="lbl">ผู้ซื้อ</label><input id="d-buyer" className="inp" value={desk.draft.buyer} onChange={(e) => svc.setBuyer(e.target.value)} /></div>
+                        <div className="fld"><label htmlFor="d-rcpt" className="lbl">เลขที่ใบเสร็จนำส่งเงินเป็นรายได้</label><input id="d-rcpt" className="inp" value={desk.draft.receipt} onChange={(e) => svc.setReceipt(e.target.value)} /></div>
+                      </div>
+                      <div className="lbl">รวมเงินที่ขายได้ {baht(current.data.ids.reduce((t, id) => t + (parseInt(desk.draft.soldP[id] ?? '', 10) || 0), 0))}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        <button className="btn pri" onClick={() => svc.recordResult()}>บันทึกผลการขาย</button>
+                        {isAuction && (
+                          <>
+                            <button className="btn" onClick={() => onPrint('auction')}>ดูประกาศ</button>
+                            <button className="btn warn" onClick={() => svc.noBid()}>ไม่มีผู้เสนอราคาถึงขั้นต่ำ (A2)</button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {!sale && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                        <div className="fld"><label htmlFor="d-party" className="lbl">{METHODS[current.data.method].partyLabel}</label><input id="d-party" className="inp" value={desk.draft.party} onChange={(e) => svc.setParty(e.target.value)} /></div>
+                        <div className="fld"><label htmlFor="d-ref" className="lbl">เลขที่เอกสารอ้างอิง</label><input id="d-ref" className="inp" value={desk.draft.ref} onChange={(e) => svc.setRef(e.target.value)} /></div>
+                      </div>
+                      <div><button className="btn pri" onClick={() => svc.recordResult()}>บันทึกผลการดำเนินการ</button></div>
+                    </>
                   )}
                 </>
               )}

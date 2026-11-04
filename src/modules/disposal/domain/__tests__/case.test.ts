@@ -149,3 +149,78 @@ describe('a round with no bid', () => {
     expect(c.announce({ A16: '4000', A17: '9000' }).lines[0]!.text).toBe('ปิดประกาศขายทอดตลาด ครั้งที่ 2 ราคาขั้นต่ำ 4,000 บาท');
   });
 });
+
+function announced(): DisposalCase {
+  const c = atStep3();
+  c.announce({ A16: '5000', A17: '12000' });
+  return c;
+}
+
+function codeOf(run: () => unknown): string | undefined {
+  try { run(); } catch (e) { return (e as DomainError).code; }
+  return undefined;
+}
+
+const sale = { soldPrices: { A16: '5000', A17: '12000' }, buyer: 'บจ. ผู้ซื้อ', receipt: 'ร.1/2569', party: '', ref: '' };
+
+describe('recording the result', () => {
+  it('AC37: an auction price below the minimum throws SALE_PRICE_BELOW_MIN and changes nothing', () => {
+    const c = announced();
+    expect(codeOf(() => c.recordResult({ ...sale, soldPrices: { A16: '4999', A17: '12000' } }))).toBe('SALE_PRICE_BELOW_MIN');
+    expect(c.data.step).toBe(3);
+  });
+
+  it('AC37: a missing or zero auction price throws SALE_PRICE_BELOW_MIN', () => {
+    expect(codeOf(() => announced().recordResult({ ...sale, soldPrices: { A16: '5000' } }))).toBe('SALE_PRICE_BELOW_MIN');
+    expect(codeOf(() => announced().recordResult({ ...sale, soldPrices: { A16: '0', A17: '12000' } }))).toBe('SALE_PRICE_BELOW_MIN');
+  });
+
+  it('AC37: a price equal to the minimum is accepted', () => {
+    const c = announced();
+    c.recordResult(sale);
+    expect(c.data.step).toBe(4);
+  });
+
+  it('AC37: a missing buyer or a missing receipt throws BUYER_RECEIPT_REQUIRED', () => {
+    expect(codeOf(() => announced().recordResult({ ...sale, buyer: '  ' }))).toBe('BUYER_RECEIPT_REQUIRED');
+    expect(codeOf(() => announced().recordResult({ ...sale, receipt: '' }))).toBe('BUYER_RECEIPT_REQUIRED');
+  });
+
+  it('AC37: a direct sale needs a price for every asset but no minimum, and throws SALE_PRICE_REQUIRED without one', () => {
+    const c = open();
+    c.recordFact('none');
+    c.approve('direct', 38400);
+    expect(codeOf(() => c.recordResult({ ...sale, soldPrices: { A16: '1000' } }))).toBe('SALE_PRICE_REQUIRED');
+    c.recordResult({ ...sale, soldPrices: { A16: '1000', A17: '2' } });
+    expect(c.data.step).toBe(4);
+  });
+
+  it('AC37: a sale logs the buyer, the price and the receipt on the date the sale is done', () => {
+    const c = announced();
+    const effect = c.recordResult(sale);
+    expect(effect.lines.map((l) => l.text)).toEqual(['ขายทอดตลาด ให้ บจ. ผู้ซื้อ ราคา 5,000 บาท · ใบเสร็จ ร.1/2569', 'ขายทอดตลาด ให้ บจ. ผู้ซื้อ ราคา 12,000 บาท · ใบเสร็จ ร.1/2569']);
+    expect(effect.lines[0]!.date).toEqual(c.data.plan.sale);
+    expect(c.data.soldP).toEqual({ A16: 5000, A17: 12000 });
+  });
+
+  it('AC37: a method that is not a sale needs a party and a reference, and throws PARTY_REF_REQUIRED with the party label', () => {
+    const c = open();
+    c.recordFact('none');
+    c.approve('transfer', 38400);
+    let error: unknown;
+    try { c.recordResult({ ...sale, party: 'วิทยาลัยพยาบาล', ref: '' }); } catch (e) { error = e; }
+    expect((error as DomainError).code).toBe('PARTY_REF_REQUIRED');
+    expect((error as DomainError).params).toEqual({ party: 'หน่วยงานผู้รับโอน' });
+    expect(c.data.step).toBe(3);
+  });
+
+  it('AC37: a transfer with a party and a reference logs them, dated 5 working days after approval', () => {
+    const c = open();
+    c.recordFact('none');
+    c.approve('transfer', 38400);
+    const effect = c.recordResult({ ...sale, party: 'วิทยาลัยพยาบาล', ref: 'หนังสือ 5/2569' });
+    expect(c.data.step).toBe(4);
+    expect(effect.lines[0]!.text).toBe('โอน: วิทยาลัยพยาบาล · หนังสือ 5/2569');
+    expect(effect.lines[0]!.date).toEqual(c.dates.done);
+  });
+});

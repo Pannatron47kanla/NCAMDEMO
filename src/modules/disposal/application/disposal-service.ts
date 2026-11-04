@@ -112,6 +112,12 @@ export class DisposalService {
   private edit(p: Partial<CaseDraft>): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, ...p }, note: null })); }
 
   setFault(fault: Fault): void { this.edit({ fault }); }
+  setBuyer(buyer: string): void { this.edit({ buyer }); }
+  setReceipt(receipt: string): void { this.edit({ receipt }); }
+  setParty(party: string): void { this.edit({ party }); }
+  setRef(ref: string): void { this.edit({ ref }); }
+  /** Digits only, as the field allows. */
+  setSoldPrice(id: string, typed: string): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, soldP: { ...d.draft.soldP, [id]: typed.replace(/[^0-9]/g, '') } }, note: null })); }
   /** Digits only, as the field allows. */
   setMinPrice(id: string, typed: string): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, minP: { ...d.draft.minP, [id]: typed.replace(/[^0-9]/g, '') } }, note: null })); }
 
@@ -152,5 +158,10 @@ export class DisposalService {
     let round = 0;
     const done = this.step((c) => { c.noBid(); round = c.data.round; });
     if (done) this.desk.set((d) => ({ ...d, draft: { ...d.draft, soldP: {}, buyer: '', receipt: '' }, note: { code: 'NO_BID_RECORDED', params: { round } } }));
+  }
+
+  recordResult(): void {
+    const { draft } = this.desk.get();
+    this.step((c) => c.recordResult({ soldPrices: draft.soldP, buyer: draft.buyer, receipt: draft.receipt, party: draft.party, ref: draft.ref }));
   }
 }
