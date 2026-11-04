@@ -1,5 +1,6 @@
 import { DomainError } from '../../../shared/domain-error';
-import type { LendableAsset } from './cart';
+import type { CartItem, LendableAsset } from './cart';
+import type { LoanSettings } from './loan-settings';
 import type { Loan } from './loan';
 
 export type BorrowerType = 'นักศึกษา' | 'อาจารย์';
@@ -37,7 +38,11 @@ export class Borrower {
   }
 
   /** Throws a DomainError when this borrower may not take the asset now. */
-  assertCanTake(asset: LendableAsset): void {
+  assertCanTake(asset: LendableAsset, cart: readonly CartItem[], loans: readonly Loan[], settings: LoanSettings): void {
     if (asset.status !== 'พร้อมใช้') throw new DomainError('ASSET_NOT_AVAILABLE', { name: asset.name, status: asset.status });
+    if (this.isStudent && asset.parts.length) {
+      const held = this.kitsHeld(loans) + cart.filter((it) => it.parts.length).length;
+      if (held >= settings.maxSets) throw new DomainError('KIT_LIMIT_REACHED', { max: settings.maxSets, held });
+    }
   }
 }

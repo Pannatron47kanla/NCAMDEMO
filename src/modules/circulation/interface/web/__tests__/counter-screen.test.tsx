@@ -96,4 +96,12 @@ describe('counter screen', () => {
     await user.type(screen.getByRole('textbox'), `${a.code}{Enter}`);
     expect(screen.getByRole('status')).toHaveTextContent(`จ่ายไม่ได้: ${a.name} สถานะ "รอซ่อม"`);
   });
+
+  it('AC12: the third kit for a student shows the Thai limit error', async () => {
+    const { user, registry } = show();
+    await user.click(screen.getByRole('button', { name: /6611010015/ }));
+    for (const id of ['A1', 'A7', 'A3']) await user.type(screen.getByRole('textbox'), `${registry.catalog.findById(id)!.code}{Enter}`);
+    expect(screen.getByRole('status')).toHaveTextContent('เกินจำนวนสูงสุด 2 ชุดต่อนักศึกษา (มีในรายการ/ถืออยู่แล้ว 2 ชุด)');
+    expect(screen.getByText('2 รายการ')).toBeInTheDocument();
+  });
 });

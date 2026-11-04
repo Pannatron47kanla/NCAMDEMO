@@ -116,3 +116,38 @@ describe('counter asset status', () => {
     expect(state().cart).toEqual([]);
   });
 });
+
+describe('student kit limit', () => {
+  const codeOf = (registry: ReturnType<typeof setup>['registry'], id: string) => registry.catalog.findById(id)!.code;
+
+  it('AC12: a student with 2 kits in the cart gets KIT_LIMIT_REACHED for a third; an asset without parts still passes', () => {
+    const { counter, registry, state } = setup();
+    counter.scan('6611010015');
+    counter.scan(codeOf(registry, 'A1'));
+    counter.scan(codeOf(registry, 'A7'));
+    const error = refusal(() => counter.scan(codeOf(registry, 'A3')));
+    expect(error).toMatchObject({ code: 'KIT_LIMIT_REACHED', params: { max: 2, held: 2 } });
+    expect(state().msg).toEqual({ kind: 'err', code: 'KIT_LIMIT_REACHED', params: { max: 2, held: 2 } });
+    expect(state().cart).toHaveLength(2);
+    counter.scan(codeOf(registry, 'A5'));
+    expect(state().cart.map((it) => it.assetId)).toEqual(['A1', 'A7', 'A5']);
+  });
+
+  it('AC12: kits already held on open loans count toward the limit', () => {
+    const { counter, circulation, registry, clock } = setup();
+    circulation.loans.set((list) => list.concat([Loan.restore({
+      id: 'L-9', borrowerCode: '6611010015', start: clock.now(), due: addDays(clock.now(), 7), pending: false,
+      items: [{ assetId: 'A2', returned: false, note: 'ครบทุกชิ้น', kit: true }, { assetId: 'A4', returned: false, note: 'ครบทุกชิ้น', kit: true }],
+    })]));
+    counter.scan('6611010015');
+    const error = refusal(() => counter.scan(codeOf(registry, 'A1')));
+    expect(error).toMatchObject({ code: 'KIT_LIMIT_REACHED', params: { max: 2, held: 2 } });
+  });
+
+  it('AC12: a teacher is not limited', () => {
+    const { counter, registry, state } = setup();
+    counter.scan('T0007');
+    for (const id of ['A1', 'A7', 'A3']) counter.scan(codeOf(registry, id));
+    expect(state().cart).toHaveLength(3);
+  });
+});

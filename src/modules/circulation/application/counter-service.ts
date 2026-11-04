@@ -92,7 +92,7 @@ export class CounterService {
     const borrower = this.deps.borrowers.findByCode(c.borrowerCode);
     if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code: c.borrowerCode });
     try {
-      borrower.assertCanTake(asset);
+      borrower.assertCanTake(asset, c.cart, this.deps.loans.list(), this.deps.settings.get());
     } catch (e) {
       if (e instanceof DomainError) return this.refuse(e.code, e.params);
       throw e;
