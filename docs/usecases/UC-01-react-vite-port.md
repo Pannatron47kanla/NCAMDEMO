@@ -135,4 +135,5 @@ All numbers come from the mockup and must not change in this port.
 - The UI layer is `interface/web`.
 - Contexts follow `docs/architecture/context-map.md`.
 - This work stays as one Story and one PR, even though 44 ACs is above the team's guideline of about 7.
+- From AC21 on, tests cover business rules only, without a required red run. Screens are checked by smoke flows and the AC5 comparison. This exception applies only to UC-01.
 - With no database, repositories are in-memory and are tested directly. The rule that repository tests run on a real database applies once a backend exists.

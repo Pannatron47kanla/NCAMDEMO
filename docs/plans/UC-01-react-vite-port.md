@@ -112,6 +112,16 @@ Each task below lists only its decisions. Every task follows these steps:
 - [ ] Run `npm test`, `npm run lint`, and `npm run build`. All must pass.
 - [ ] Commit only that task's files with the listed message.
 
+## Test scope exception from Task 21 on
+
+The user chose this exception to the test-first rule in `AGENTS.md`. It applies only to UC-01, because the port will be followed by real development with its own tests. It overrides the cycle above and the tests listed in Tasks 21 to 45.
+
+- Write tests for business rules in `domain` and `application`, named `AC<n>: ...`. They may be written alongside the code, and no red run is required.
+- Do not write tests for screens in `interface/web` or `src/app`, except where an AC has no rule to test and the task lists a small non-visual check.
+- Run `npm test`, `npm run lint`, and `npm run build` before each commit. All must pass. Each AC is still one commit.
+- There is no review per group. The whole branch gets one review at the end.
+- Playwright smoke flows on the production build and the side-by-side comparison with the mockup (AC5) check the screens.
+
 ## Tasks
 
 Task numbers match AC numbers from Task 6 on, except Tasks 5 (AC30) and 45 (AC5). Work through them in the order listed here.
