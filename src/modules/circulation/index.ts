@@ -3,3 +3,6 @@ export { createCirculationModule, type CirculationModule, type CirculationPorts 
 export { CounterScreen, type CounterScreenProps } from './interface/web/CounterScreen';
 export type { RepairIntake, RepairIntakeInput, RepairTicketRef } from './application/ports';
 export { holderText } from './interface/web/holder';
+export type { Borrower } from './domain/borrower';
+export type { Loan, LoanItem } from './domain/loan';
+export type { LoanSettings } from './domain/loan-settings';

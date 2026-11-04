@@ -5,6 +5,7 @@ import { CounterScreen } from './CounterScreen';
 import { DisposalScreen } from './DisposalScreen';
 import { AssetsScreen, RoomScanPage } from './RegisterScreens';
 import { RepairScreen } from './RepairScreen';
+import { CalendarScreen } from './calendar/CalendarScreen';
 import { DashboardScreen } from './dashboard/DashboardScreen';
 import type { AppModules } from './modules';
 import type { ScreenKey, ScreenParams } from './navigation';
@@ -33,6 +34,7 @@ export const SCREENS: Partial<Record<ScreenKey, ScreenRenderer>> = {
   audit: (ctx) => <AuditScreen {...ctx} />,
   disp: (ctx) => <DisposalScreen {...ctx} />,
   roomscan: (ctx) => <RoomScanPage {...ctx} />,
+  cal: (ctx) => <CalendarScreen {...ctx} />,
 };
 
 /**

@@ -4,6 +4,7 @@ import { createCirculationModule, type CirculationModule } from '../modules/circ
 import { createDisposalModule, type DisposalModule } from '../modules/disposal';
 import { createMaintenanceModule, type MaintenanceModule } from '../modules/maintenance';
 import { createRegistryModule, type RegistryModule } from '../modules/registry';
+import { createAppViews, type AppViews } from './views';
 
 /** Every context, built from the seed and wired together. */
 export interface AppModules {
@@ -13,6 +14,8 @@ export interface AppModules {
   circulation: CirculationModule;
   audit: AuditModule;
   disposal: DisposalModule;
+  /** Screen controls that outlive the screen: the calendar and the map. */
+  views: AppViews;
 }
 
 /**
@@ -29,5 +32,5 @@ export function createAppModules(clock: Clock): AppModules {
   const circulation = createCirculationModule(clock, { assets: registry.catalog, repairs: maintenance.repairs });
   const audit = createAuditModule(clock, { assets: registry.catalog });
   const disposal = createDisposalModule(clock, { assets: registry.catalog, repairs: maintenance.repairs });
-  return { clock, registry, maintenance, circulation, audit, disposal };
+  return { clock, registry, maintenance, circulation, audit, disposal, views: createAppViews() };
 }
