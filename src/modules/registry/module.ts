@@ -29,5 +29,5 @@ export interface RegistryModule {
 export function createRegistryModule(clock: Clock = systemClock): RegistryModule {
   const assets = createStore<Asset[]>(seedAssets());
   const repository = new InMemoryAssetRepository(assets);
-  return { catalog: new InMemoryAssetCatalog(assets), assets, addAsset: new AddAssetService(clock, repository), importer: new ImportService(clock, repository), roomScan: new RoomScanService(repository) };
+  return { catalog: new InMemoryAssetCatalog(assets), assets, addAsset: new AddAssetService(clock, repository), importer: new ImportService(clock, repository), roomScan: new RoomScanService(clock, repository) };
 }

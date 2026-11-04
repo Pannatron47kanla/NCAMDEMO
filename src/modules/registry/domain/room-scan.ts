@@ -104,3 +104,58 @@ export function scanCode(state: RoomScanState, raw: string | null | undefined, a
   const item: ScanItem = { id: asset.id, from: asset.room, to: state.room, kind, why, ok: false };
   return { ...state, scan: '', done: null, items: [item].concat(state.items), msg: msg[kind] };
 }
+
+/** Confirms or cancels a move. Only a `move` needs the officer's confirmation. */
+export function toggleConfirm(state: RoomScanState, id: string): RoomScanState {
+  return { ...state, done: null, items: state.items.map((x) => (x.id === id ? { ...x, ok: !x.ok } : x)) };
+}
+
+export function removeItem(state: RoomScanState, id: string): RoomScanState {
+  return { ...state, items: state.items.filter((x) => x.id !== id) };
+}
+
+/** An item that saving will change: a first placement, or a move the officer confirmed. */
+export function willChange(item: ScanItem): boolean {
+  return item.kind === 'new' || (item.kind === 'move' && item.ok);
+}
+
+/** The counts of the summary panel. */
+export function tally(items: readonly ScanItem[]) {
+  const count = (kind: ScanKind, ok?: boolean) => items.filter((i) => i.kind === kind && (ok === undefined || i.ok === ok)).length;
+  return { new: count('new'), move: count('move', true), moveWait: count('move', false), same: count('same'), block: count('block'), save: count('new') + count('move', true) };
+}
+
+const BY = ' (กำหนดห้องแบบต่อเนื่อง โดย lab.officer)';
+
+export interface ScanSave {
+  state: RoomScanState;
+  /** The assets that changed, with their new room and one more history line. */
+  changed: Asset[];
+}
+
+/**
+ * Saves the list: first placements and confirmed moves get the new room and a history line (dated `date`);
+ * unconfirmed moves, same-room items and blocked items do not change. Afterwards the list is empty, the room stays,
+ * and `done` says how many changed. With nothing to save, nothing happens at all, so saving twice changes nothing twice.
+ */
+export function saveScan(state: RoomScanState, assets: readonly Asset[], date: string): ScanSave {
+  const todo = state.items.filter(willChange);
+  if (!todo.length) return { state, changed: [] };
+  const changed: Asset[] = [];
+  todo.forEach((i) => {
+    const asset = assets.find((a) => a.id === i.id);
+    if (!asset) return;
+    const text = i.kind === 'new' ? 'กำหนดห้อง ' + i.to + BY : 'ย้ายจาก ' + i.from + ' ไป ' + i.to + BY;
+    changed.push({ ...asset, room: i.to, events: asset.events.concat([{ date, text, doc: '-' }]) });
+  });
+  return { state: { ...newRoomScan(), room: state.room, done: { n: todo.length, lastId: todo[0]!.id } }, changed };
+}
+
+/** Assets offered as sample scan buttons: those waiting for a room, the newest 8 registered here, then 4 from the seed; 12 at most. */
+export function scanSuggestions(assets: readonly Asset[], items: readonly ScanItem[]): Asset[] {
+  const pool = assets.filter((a) => a.status !== 'จำหน่ายแล้ว');
+  const pending = pool.filter((a) => a.room === PENDING_ROOM);
+  const added = pool.filter((a) => a.room !== PENDING_ROOM && /^N/.test(a.id)).slice(-8);
+  const old = pool.filter((a) => a.room !== PENDING_ROOM && !/^N/.test(a.id)).slice(0, 4);
+  return pending.concat(added, old).filter((a) => !items.some((i) => i.id === a.id)).slice(0, 12);
+}
