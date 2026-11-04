@@ -35,8 +35,17 @@ describe('bundled assets', () => {
     expect(allCss).toMatch(/font-family:\s*["']?Anuphan/);
     for (const f of woff2) expect(allCss).toContain(f.split('/').pop());
 
+    // Sarabun and IBM Plex Mono are bundled too, for the print pages and the codes
+    for (const name of ['sarabun-thai-400', 'sarabun-latin-400', 'sarabun-thai-600', 'sarabun-latin-600', 'ibm-plex-mono-latin-500']) {
+      expect(woff2.some((f) => f.includes(name)), name).toBe(true);
+    }
+    expect(allCss).toMatch(/font-family:\s*["']?Sarabun/);
+    expect(allCss).toMatch(/font-family:\s*["']?IBM Plex Mono/);
+
     // the licence stays in the repository, beside the fonts
     expect(existsSync(join(FONT_DIR, 'OFL.txt'))).toBe(true);
+    expect(existsSync(join(FONT_DIR, 'OFL-sarabun.txt'))).toBe(true);
+    expect(existsSync(join(FONT_DIR, 'OFL-ibm-plex-mono.txt'))).toBe(true);
     expect(existsSync(join(FONT_DIR, 'anuphan-thai.woff2'))).toBe(true);
     expect(existsSync(join(FONT_DIR, 'anuphan-latin.woff2'))).toBe(true);
   });
