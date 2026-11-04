@@ -5,7 +5,7 @@ import { INITIAL_NAV_OPEN, type NavGroup, type NavOpen } from './nav';
 import { ROLES } from './roles';
 import { Shell } from './Shell';
 
-// Outer frame and title bar: mockup lines 339-348.
+// Outer frame, title bar and status bar: mockup lines 339-348 and 1578-1582.
 function Frame({ children }: { children: ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', boxSizing: 'border-box', padding: '20px 16px', background: '#dbe3e6', fontFamily: "'Anuphan', 'Sarabun', system-ui, sans-serif", color: '#15232a', fontSize: 14, lineHeight: 1.5 }}>
@@ -18,6 +18,11 @@ function Frame({ children }: { children: ReactNode }) {
           <svg width="96" height="14" viewBox="0 0 96 14" aria-hidden="true"><path d="M8 7h10" stroke="#a9c0c6" strokeWidth="1.4" /><rect x="42" y="2" width="10" height="10" fill="none" stroke="#a9c0c6" strokeWidth="1.4" /><path d="M78 2l10 10M88 2L78 12" stroke="#a9c0c6" strokeWidth="1.4" /></svg>
         </div>
         {children}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', padding: '6px 14px', background: '#e9eef0', borderTop: '1px solid #c9d3d6', fontSize: 12, color: '#46565c' }}>
+          <span>เซิร์ฟเวอร์: 10.10.1.20 (LAN) · เชื่อมต่อแล้ว</span>
+          <span>วันที่ระบบ 28 ต.ค. 69</span>
+          <span style={{ marginLeft: 'auto' }}>NCAM v0.2 ต้นแบบ</span>
+        </div>
       </div>
     </div>
   );
