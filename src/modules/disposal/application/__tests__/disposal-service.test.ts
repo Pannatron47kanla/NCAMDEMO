@@ -44,3 +44,41 @@ describe('creating a case', () => {
     expect(disposal.current.get()).toBeNull();
   });
 });
+
+describe('finding and approval', () => {
+  it('AC34: recording the finding moves to step 2 and adds the committee line dated on the planned fact date (5 working days on)', () => {
+    const { svc, disposal, asset } = setup();
+    svc.createCase();
+    svc.recordFact();
+    expect(disposal.current.get()!.data.step).toBe(2);
+    expect(asset('A16').events.at(-1)).toEqual({ date: '4 พ.ย. 69', text: 'กรรมการสอบหาข้อเท็จจริง: เสื่อมสภาพจากการใช้งานตามปกติ ไม่มีผู้ต้องรับผิด', doc: 'DS-2569-001' });
+  });
+
+  it('AC34: a direct sale of the whole register is refused with DIRECT_SALE_LIMIT, the case stays at step 2 and no history line is added', () => {
+    const { svc, disposal, registry, asset } = setup();
+    registry.catalog.list().forEach((a) => { if (!svc.desk.get().sel[a.id]) svc.toggle(a.id); });
+    svc.createCase();
+    svc.recordFact();
+    const ids = disposal.current.get()!.data.ids;
+    const total = ids.reduce((t, id) => t + asset(id).price, 0);
+    expect(total).toBeGreaterThan(500000);
+    svc.setMethod('direct');
+    const lines = asset(ids[0]!).events.length;
+    svc.approve();
+    expect(svc.desk.get().note?.code).toBe('DIRECT_SALE_LIMIT');
+    expect(svc.desk.get().note?.params).toEqual({ total });
+    expect(disposal.current.get()!.data.step).toBe(2);
+    expect(asset(ids[0]!).events).toHaveLength(lines);
+  });
+
+  it('AC34: approving a direct sale within the limit moves to step 3 and adds the approval line', () => {
+    const { svc, disposal, asset } = setup();
+    svc.createCase();
+    svc.recordFact();
+    svc.setMethod('direct');
+    svc.approve();
+    expect(disposal.current.get()!.data.step).toBe(3);
+    expect(asset('A17').events.at(-1)!.text).toBe('ผู้อำนวยการอนุมัติจำหน่ายโดยวิธีขายโดยวิธีเฉพาะเจาะจง');
+    expect(svc.desk.get().note).toBeNull();
+  });
+});

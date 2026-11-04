@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DomainError } from '../../../../shared/domain-error';
 import { DisposalCase, type Candidate } from '../case';
 
 const TODAY = new Date(2026, 9, 28);
@@ -45,5 +46,49 @@ describe('creating a case', () => {
   it('AC33: nothing is created when no selected asset can join', () => {
     expect(create([{ id: 'A2', status: 'ถูกยืม', hasOpenTicket: false }])).toBeUndefined();
     expect(create([])).toBeUndefined();
+  });
+});
+
+const open = () => create([ok('A16'), ok('A17')])!;
+
+describe('recording the finding and approving the method', () => {
+  it('AC34: the finding moves the case to step 2 and logs the committee text on the planned fact date', () => {
+    const c = open();
+    const effect = c.recordFact('none');
+    expect(c.data.step).toBe(2);
+    expect(effect.lines.map((l) => [l.assetId, l.text, l.doc])).toEqual([
+      ['A16', 'กรรมการสอบหาข้อเท็จจริง: เสื่อมสภาพจากการใช้งานตามปกติ ไม่มีผู้ต้องรับผิด', 'DS-2569-001'],
+      ['A17', 'กรรมการสอบหาข้อเท็จจริง: เสื่อมสภาพจากการใช้งานตามปกติ ไม่มีผู้ต้องรับผิด', 'DS-2569-001'],
+    ]);
+    expect(effect.lines[0]!.date).toEqual(c.data.plan.fact);
+    expect(open().recordFact('liable').lines[0]!.text).toBe('กรรมการสอบหาข้อเท็จจริง: มีผู้ต้องรับผิด ชดใช้เรียบร้อยแล้ว');
+  });
+
+  it('AC34: a direct sale with a total of 500,001 baht throws DIRECT_SALE_LIMIT and changes nothing', () => {
+    const c = open();
+    c.recordFact('none');
+    let error: unknown;
+    try { c.approve('direct', 500001); } catch (e) { error = e; }
+    expect(error).toBeInstanceOf(DomainError);
+    expect((error as DomainError).code).toBe('DIRECT_SALE_LIMIT');
+    expect((error as DomainError).params).toEqual({ total: 500001 });
+    expect(c.data.step).toBe(2);
+  });
+
+  it('AC34: a direct sale with exactly 500,000 baht is approved and moves to step 3', () => {
+    const c = open();
+    c.recordFact('none');
+    const effect = c.approve('direct', 500000);
+    expect(c.data.step).toBe(3);
+    expect(c.data.method).toBe('direct');
+    expect(effect.lines[0]!.text).toBe('ผู้อำนวยการอนุมัติจำหน่ายโดยวิธีขายโดยวิธีเฉพาะเจาะจง');
+    expect(effect.lines[0]!.date).toEqual(c.data.plan.approve);
+  });
+
+  it('AC34: the limit applies only to a direct sale; an auction above 500,000 baht is approved', () => {
+    const c = open();
+    c.recordFact('none');
+    c.approve('auction', 900000);
+    expect(c.data.step).toBe(3);
   });
 });

@@ -4,7 +4,8 @@ import { chip } from '../../../../shared/web/chip';
 import { Icon } from '../../../../shared/web/Icon';
 import { useStore } from '../../../../shared/web/useStore';
 import { assetInfo, iconOf, type Asset } from '../../../registry';
-import { REASONS } from '../../domain/methods';
+import { METHODS, METHOD_KEYS, REASONS, type MethodKey } from '../../domain/methods';
+import type { Fault } from '../../domain/case';
 import type { DisposalModule } from '../../module';
 import { messageText } from './messages';
 
@@ -102,6 +103,31 @@ export function CaseDialog({ disposal, assets, now, stageDates }: CaseDialogProp
                 <span className="lbl" style={{ marginLeft: 'auto' }}>วันที่ในขั้นตอนเป็นวันที่จำลองเพื่อสาธิต</span>
               </div>
               {note && <div role="alert" style={{ padding: '8px 12px', borderRadius: 6, background: '#fcefd9', color: '#6b3b00' }}>{messageText(note.code, note.params)}</div>}
+              {step === 1 && (
+                <>
+                  <div style={{ fontWeight: 600 }}>ขั้นที่ 2 · บันทึกผลคณะกรรมการสอบหาข้อเท็จจริง</div>
+                  <div className="fld">
+                    <label htmlFor="d-fault" className="lbl">ผลการสอบหาข้อเท็จจริง</label>
+                    <select id="d-fault" className="inp" value={desk.draft.fault} onChange={(e) => svc.setFault(e.target.value as Fault)}>
+                      <option value="none">เสื่อมสภาพจากการใช้งานตามปกติ ไม่มีผู้ต้องรับผิด</option>
+                      <option value="liable">มีผู้ต้องรับผิด ต้องชดใช้ก่อน (ทางเลือก A1)</option>
+                    </select>
+                  </div>
+                  {desk.draft.fault === 'liable' && <div className="lbl">ระบบจริงจะสร้างรายการติดตามการชดใช้ (FR-6.2) และพักเรื่องจนชดใช้ครบ ในต้นแบบนี้กดบันทึกเพื่อจำลองว่าชดใช้เรียบร้อยแล้ว</div>}
+                  <div><button className="btn pri" onClick={() => svc.recordFact()}>บันทึกผลกรรมการ</button></div>
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <div style={{ fontWeight: 600 }}>ขั้นที่ 3 · เลือกวิธีจำหน่ายและขออนุมัติ</div>
+                  <div className="fld">
+                    <label htmlFor="d-method" className="lbl">วิธีจำหน่าย</label>
+                    <select id="d-method" className="inp" value={current.data.method} onChange={(e) => svc.setMethod(e.target.value as MethodKey)}>{METHOD_KEYS.map((k) => <option key={k} value={k}>{METHODS[k].label}</option>)}</select>
+                  </div>
+                  <div className="lbl">{METHODS[current.data.method].note}</div>
+                  <div><button className="btn pri" onClick={() => svc.approve()}>บันทึก: ผู้อำนวยการอนุมัติ</button></div>
+                </>
+              )}
             </>
           )}
         </div>

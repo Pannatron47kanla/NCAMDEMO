@@ -1,5 +1,6 @@
+import { DomainError } from '../../../shared/domain-error';
 import { caseDates, casePlan, type CaseDates, type CasePlan } from './plan';
-import type { MethodKey } from './methods';
+import { METHODS, type MethodKey } from './methods';
 
 export type Fault = 'none' | 'liable';
 /** The asset status a case moves its assets to. */
@@ -69,6 +70,9 @@ export interface CaseState {
 
 /** เรื่องจำหน่าย: one disposal case across its 6 steps. The only way to change a case. */
 export class DisposalCase {
+  /** A direct sale is allowed only when the total purchase price is at most this many baht. */
+  static readonly DIRECT_SALE_LIMIT = 500000;
+
   private constructor(private state: CaseState) {}
 
   /**
@@ -102,5 +106,31 @@ export class DisposalCase {
       status: 'รอจำหน่าย',
       lines: s.ids.map((assetId) => ({ assetId, date: s.plan.created, text: 'เสนอจำหน่าย (' + s.reason + ') แต่งตั้งคณะกรรมการสอบหาข้อเท็จจริง', doc: s.id })),
     };
+  }
+
+  private lines(date: Date, text: (assetId: string) => string): HistoryLine[] {
+    return this.state.ids.map((assetId) => ({ assetId, date, text: text(assetId), doc: this.state.id }));
+  }
+
+  /** Step 2: the committee's finding (mockup recordFact, line 2077). Moves to step 2. */
+  recordFact(fault: Fault): CaseEffect {
+    const text = fault === 'none' ? 'กรรมการสอบหาข้อเท็จจริง: เสื่อมสภาพจากการใช้งานตามปกติ ไม่มีผู้ต้องรับผิด' : 'กรรมการสอบหาข้อเท็จจริง: มีผู้ต้องรับผิด ชดใช้เรียบร้อยแล้ว';
+    this.state = { ...this.state, fault, step: 2 };
+    return { lines: this.lines(this.state.plan.fact, () => text) };
+  }
+
+  /** Picks the method on the form. It already changes the planned dates, as the mockup does. */
+  chooseMethod(method: MethodKey): void {
+    this.state = { ...this.state, method };
+  }
+
+  /**
+   * Step 3: the director approves the method (mockup approveCase, line 2083). A direct sale whose total purchase
+   * price is above 500,000 baht throws DIRECT_SALE_LIMIT and changes nothing. Moves to step 3.
+   */
+  approve(method: MethodKey, totalPrice: number): CaseEffect {
+    if (method === 'direct' && totalPrice > DisposalCase.DIRECT_SALE_LIMIT) throw new DomainError('DIRECT_SALE_LIMIT', { total: totalPrice });
+    this.state = { ...this.state, method, step: 3 };
+    return { lines: this.lines(this.state.plan.approve, () => 'ผู้อำนวยการอนุมัติจำหน่ายโดยวิธี' + METHODS[method].label) };
   }
 }

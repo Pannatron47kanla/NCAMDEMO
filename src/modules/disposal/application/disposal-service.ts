@@ -1,8 +1,9 @@
 import type { Clock } from '../../../shared/clock';
+import { DomainError } from '../../../shared/domain-error';
 import { thd } from '../../../shared/dates';
 import { createStore, type Store } from '../../../shared/store';
 import { blockReason, DisposalCase, type BlockReason, type CaseEffect, type Fault } from '../domain/case';
-import { REASONS } from '../domain/methods';
+import { REASONS, type MethodKey } from '../domain/methods';
 import type { DisposalCaseRepository } from '../domain/repositories';
 import type { AssetsPort, OpenRepairsPort } from './ports';
 
@@ -106,5 +107,39 @@ export class DisposalService {
     this.apply(made.opening(), made.data.ids);
     this.cases.save(made);
     this.patch({ draft: { ...BLANK_DRAFT }, note: null });
+  }
+
+  private edit(p: Partial<CaseDraft>): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, ...p }, note: null })); }
+
+  setFault(fault: Fault): void { this.edit({ fault }); }
+
+  /**
+   * Loads the open case, runs one step on a copy, applies what it does to the assets and saves it.
+   * A broken rule is kept as the note above the step; the case and the assets are left as they were.
+   */
+  private step(run: (c: DisposalCase) => CaseEffect | void): boolean {
+    const open = this.cases.current();
+    if (!open) return false;
+    const next = open.clone();
+    try {
+      const effect = run(next);
+      if (effect) this.apply(effect, next.data.ids);
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e;
+      this.patch({ note: { code: e.code, params: e.params } });
+      return false;
+    }
+    this.cases.save(next);
+    this.patch({ note: null });
+    return true;
+  }
+
+  /** The method picked on the form. */
+  setMethod(method: MethodKey): void { this.step((c) => c.chooseMethod(method)); }
+
+  recordFact(): void { this.step((c) => c.recordFact(this.desk.get().draft.fault)); }
+
+  approve(): void {
+    this.step((c) => c.approve(c.data.method, c.data.ids.reduce((t, id) => t + (this.assets.findById(id)?.price ?? 0), 0)));
   }
 }
