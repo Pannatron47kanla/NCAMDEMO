@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../../../shared/dates';
+import { Charge } from '../charge';
 import { DEFAULT_LOAN_SETTINGS } from '../loan-settings';
 import { DomainError } from '../../../../shared/domain-error';
 import { Loan, type LoanProps } from '../loan';
@@ -102,5 +103,24 @@ describe('damaged return', () => {
 
   it('AC19: สภาพดี never asks for a repair', () => {
     expect(loan({ due: today }).receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today).needsRepair).toBe(false);
+  });
+});
+
+describe('paying a charge', () => {
+  const charge = Charge.open({ id: 'CH1', borrowerCode: '6511010088', desc: 'ค่าปรับคืนช้า 3 วัน · หุ่น', amount: 15 });
+
+  it('AC20: an empty or blank receipt number throws RECEIPT_REQUIRED and the charge stays unpaid', () => {
+    expect(codeOf(() => charge.pay(''))).toBe('RECEIPT_REQUIRED');
+    expect(codeOf(() => charge.pay('   '))).toBe('RECEIPT_REQUIRED');
+    expect(charge.paid).toBe(false);
+    expect(charge.receipt).toBe('');
+  });
+
+  it('AC20: a receipt number marks the charge paid with the trimmed number', () => {
+    const paid = charge.pay('  ร.1234/69 ');
+    expect(paid.paid).toBe(true);
+    expect(paid.receipt).toBe('ร.1234/69');
+    expect(paid.amount).toBe(15);
+    expect(charge.paid).toBe(false);
   });
 });

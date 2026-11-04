@@ -1,5 +1,6 @@
 import type { Clock } from '../../shared/clock';
 import { createStore, type Store } from '../../shared/store';
+import { ChargeService } from './application/charge-service';
 import { CounterService } from './application/counter-service';
 import type { AssetsPort, RepairIntake } from './application/ports';
 import type { Borrower } from './domain/borrower';
@@ -16,6 +17,7 @@ export interface CirculationPorts {
 
 export interface CirculationModule {
   counter: CounterService;
+  cashier: ChargeService;
   /** The same data as observables, for screens. */
   loans: Store<Loan[]>;
   charges: Store<Charge[]>;
@@ -29,13 +31,14 @@ export function createCirculationModule(clock: Clock, ports: CirculationPorts): 
   const loans = createStore<Loan[]>(seedLoans(clock.now()));
   const charges = createStore<Charge[]>([]);
   const settings = createStore<LoanSettings>({ ...DEFAULT_LOAN_SETTINGS });
+  const chargeRepository = new InMemoryChargeRepository(charges);
   const counter = new CounterService(clock, {
     borrowers: new InMemoryBorrowerRepository(borrowers),
     loans: new InMemoryLoanRepository(loans, SEED_LOAN_SEQ),
-    charges: new InMemoryChargeRepository(charges),
+    charges: chargeRepository,
     settings,
     assets: ports.assets,
     repairs: ports.repairs,
   });
-  return { counter, loans, charges, borrowers, settings };
+  return { counter, cashier: new ChargeService(chargeRepository), loans, charges, borrowers, settings };
 }

@@ -1,3 +1,5 @@
+import { DomainError } from '../../../shared/domain-error';
+
 export interface ChargeProps {
   id: string;
   borrowerCode: string;
@@ -22,4 +24,11 @@ export class Charge {
   get amount(): number { return this.props.amount; }
   get paid(): boolean { return this.props.paid; }
   get receipt(): string { return this.props.receipt; }
+
+  /** The borrower paid at finance. Needs the receipt number; returns the charge as it is after paying. */
+  pay(receipt: string): Charge {
+    const number = receipt.trim();
+    if (!number) throw new DomainError('RECEIPT_REQUIRED');
+    return new Charge({ ...this.props, paid: true, receipt: number });
+  }
 }

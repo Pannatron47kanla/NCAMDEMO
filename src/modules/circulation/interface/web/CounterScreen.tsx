@@ -1,10 +1,11 @@
-import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import { addDays, diffDays, thd } from '../../../../shared/dates';
 import { DomainError } from '../../../../shared/domain-error';
 import { useStore } from '../../../../shared/web/useStore';
 import type { Asset } from '../../../registry';
 import type { CirculationModule } from '../../module';
 import { BorrowPanel } from './BorrowPanel';
+import { ChargesAside } from './ChargesAside';
 import { ReturnPanel } from './ReturnPanel';
 import { messageText } from './messages';
 import { counterProgress } from './progress';
@@ -17,8 +18,6 @@ export interface CounterScreenProps {
   now: Date;
   /** Opens the loan slip for printing. */
   onPrintSlip(loanId: string): void;
-  /** The charges column to the right of the counter. */
-  aside?: ReactNode;
 }
 
 const MSG_COLORS = {
@@ -39,13 +38,15 @@ function modeStyle(on: boolean): CSSProperties {
 interface Chip { code: string; sub: string }
 
 // Counter screen, ported from mockup lines 510-549 (shared frame) and 551-605 (borrow panel).
-export function CounterScreen({ circulation, assets, now, onPrintSlip, aside }: CounterScreenProps) {
+export function CounterScreen({ circulation, assets, now, onPrintSlip }: CounterScreenProps) {
   const counter = circulation.counter;
   const c = useStore(counter.state);
   const borrowers = useStore(circulation.borrowers);
   const isBorrow = c.mode === 'borrow';
   const loans = useStore(circulation.loans);
   const settings = useStore(circulation.settings);
+  const charges = useStore(circulation.charges);
+  const cashier = useStore(circulation.cashier.state);
   const borrower = c.borrowerCode ? borrowers.find((b) => b.code === c.borrowerCode) : undefined;
 
   let chips: Chip[] = [];
@@ -79,6 +80,17 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, aside }: 
   const scan = (text: string) => {
     try {
       counter.scan(text);
+    } catch (err) {
+      if (!(err instanceof DomainError)) throw err;
+    }
+  };
+
+  const chargeRows = charges.filter((ch) => !ch.paid).map((ch) => ({
+    id: ch.id, who: borrowers.find((b) => b.code === ch.borrowerCode)?.name ?? ch.borrowerCode, desc: ch.desc, amount: ch.amount, receipt: cashier.receipts[ch.id] ?? '',
+  }));
+  const payCharge = (id: string) => {
+    try {
+      circulation.cashier.pay(id);
     } catch (err) {
       if (!(err instanceof DomainError)) throw err;
     }
@@ -170,7 +182,7 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, aside }: 
               />
             )}
         </div>
-        {aside}
+        <ChargesAside rows={chargeRows} paidN={cashier.paidN} onReceipt={(id, text) => circulation.cashier.setReceipt(id, text)} onPay={payCharge} />
       </div>
     </>
   );

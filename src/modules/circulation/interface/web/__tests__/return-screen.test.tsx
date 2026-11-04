@@ -86,3 +86,27 @@ describe('damaged return panel', () => {
     expect(within(card).getByText('รอซ่อม', { selector: '.chip' })).toBeInTheDocument();
   });
 });
+
+describe('charges column', () => {
+  it('AC20: shows the empty hint, lists a new charge, and saving needs a receipt number', async () => {
+    const { user, registry } = show();
+    expect(screen.getByText('ยังไม่มีรายการค้างชำระ')).toBeInTheDocument();
+    expect(screen.getByText('ชำระแล้ววันนี้ 0 รายการ')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'รับคืน' }));
+    await user.type(screen.getByRole('textbox', { name: /สแกนป้าย QR/ }), `${registry.catalog.findById('A2')!.code}{Enter}`);
+    await user.click(screen.getByRole('button', { name: 'ยืนยันการรับคืน' }));
+    const column = screen.getByRole('heading', { name: 'ค่าปรับ / ค่าชดใช้ค้างชำระ' }).closest('aside')!;
+    expect(within(column).getByText('นางสาวกัญญาณัฐ บุญมา')).toBeInTheDocument();
+    expect(within(column).getByText('15 บาท')).toBeInTheDocument();
+    expect(within(column).getByText(/^ค่าปรับคืนช้า 3 วัน · /)).toBeInTheDocument();
+    const save = within(column).getByRole('button', { name: 'บันทึกชำระ' });
+    expect(save).toBeDisabled();
+    await user.type(within(column).getByLabelText('เลขที่ใบเสร็จ'), '   ');
+    expect(save).toBeDisabled();
+    await user.type(within(column).getByLabelText('เลขที่ใบเสร็จ'), 'ร.55/69');
+    expect(save).toBeEnabled();
+    await user.click(save);
+    expect(within(column).getByText('ยังไม่มีรายการค้างชำระ')).toBeInTheDocument();
+    expect(within(column).getByText('ชำระแล้ววันนี้ 1 รายการ')).toBeInTheDocument();
+  });
+});
