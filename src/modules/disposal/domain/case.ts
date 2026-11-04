@@ -1,4 +1,5 @@
 import { DomainError } from '../../../shared/domain-error';
+import { baht } from '../../../shared/money';
 import { caseDates, casePlan, type CaseDates, type CasePlan } from './plan';
 import { METHODS, type MethodKey } from './methods';
 
@@ -132,5 +133,18 @@ export class DisposalCase {
     if (method === 'direct' && totalPrice > DisposalCase.DIRECT_SALE_LIMIT) throw new DomainError('DIRECT_SALE_LIMIT', { total: totalPrice });
     this.state = { ...this.state, method, step: 3 };
     return { lines: this.lines(this.state.plan.approve, () => 'ผู้อำนวยการอนุมัติจำหน่ายโดยวิธี' + METHODS[method].label) };
+  }
+
+  /**
+   * Closes the auction notice (mockup announceCase, line 2091). Every asset needs a minimum price above zero,
+   * typed as digits; otherwise it throws MIN_PRICE_REQUIRED and changes nothing.
+   */
+  announce(minPrices: Record<string, string>): CaseEffect {
+    const s = this.state;
+    const min: Record<string, number> = {};
+    s.ids.forEach((id) => { min[id] = parseInt(minPrices[id] ?? '', 10); });
+    if (s.ids.some((id) => !(min[id]! > 0))) throw new DomainError('MIN_PRICE_REQUIRED');
+    this.state = { ...s, minP: min, announced: true };
+    return { lines: this.lines(s.plan.ann, (id) => 'ปิดประกาศขายทอดตลาด ครั้งที่ ' + s.round + ' ราคาขั้นต่ำ ' + baht(min[id]!)) };
   }
 }

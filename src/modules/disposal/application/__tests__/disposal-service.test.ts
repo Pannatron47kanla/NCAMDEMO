@@ -82,3 +82,33 @@ describe('finding and approval', () => {
     expect(svc.desk.get().note).toBeNull();
   });
 });
+
+describe('closing the auction notice', () => {
+  function atNotice() {
+    const t = setup();
+    t.svc.createCase();
+    t.svc.recordFact();
+    t.svc.approve();
+    return t;
+  }
+
+  it('AC35: announcing without every minimum price keeps the case and shows MIN_PRICE_REQUIRED', () => {
+    const { svc, disposal, asset } = atNotice();
+    svc.setMinPrice('A16', '5000');
+    const lines = asset('A16').events.length;
+    svc.announce();
+    expect(svc.desk.get().note?.code).toBe('MIN_PRICE_REQUIRED');
+    expect(disposal.current.get()!.data.announced).toBe(false);
+    expect(asset('A16').events).toHaveLength(lines);
+  });
+
+  it('AC35: typed prices keep only digits, and with all of them the notice closes and each asset gets a history line', () => {
+    const { svc, disposal, asset } = atNotice();
+    svc.setMinPrice('A16', '5,000');
+    svc.setMinPrice('A17', '12000');
+    svc.announce();
+    expect(disposal.current.get()!.data.announced).toBe(true);
+    expect(svc.desk.get().note).toBeNull();
+    expect(asset('A16').events.at(-1)).toEqual({ date: '11 พ.ย. 69', text: 'ปิดประกาศขายทอดตลาด ครั้งที่ 1 ราคาขั้นต่ำ 5,000 บาท', doc: 'DS-2569-001' });
+  });
+});

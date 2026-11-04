@@ -23,7 +23,7 @@ const STAGE = ['เสนอจำหน่าย', 'สอบข้อเท็
 const STAGE_LONG = ['เสนอจำหน่ายและแต่งตั้งกรรมการ', 'กรรมการสอบหาข้อเท็จจริง', 'เลือกวิธีจำหน่ายและขออนุมัติ', 'ดำเนินการจำหน่าย', 'ลงจ่ายออกจากทะเบียน', 'แจ้ง สตง.'];
 
 // Disposal case dialog, ported from mockup lines 1472-1573 and the `dm` and `cv` view values (lines 2607-2649, 2680-2698).
-export function CaseDialog({ disposal, assets, now, stageDates }: CaseDialogProps) {
+export function CaseDialog({ disposal, assets, now, stageDates, onPrint }: CaseDialogProps) {
   const svc = disposal.disposal;
   const desk = useStore(svc.desk);
   const current = useStore(disposal.current);
@@ -34,6 +34,8 @@ export function CaseDialog({ disposal, assets, now, stageDates }: CaseDialogProp
   const selIds = svc.eligibleIds();
   const close = () => svc.closeDialog();
   const note = desk.note;
+  const isAuction = current?.data.method === 'auction';
+  const dates = current ? current.dates : null;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15, 30, 36, 0.48)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', boxSizing: 'border-box' }}>
@@ -126,6 +128,34 @@ export function CaseDialog({ disposal, assets, now, stageDates }: CaseDialogProp
                   </div>
                   <div className="lbl">{METHODS[current.data.method].note}</div>
                   <div><button className="btn pri" onClick={() => svc.approve()}>บันทึก: ผู้อำนวยการอนุมัติ</button></div>
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <div style={{ fontWeight: 600 }}>ขั้นที่ 4 · ดำเนินการ{METHODS[current.data.method].label}</div>
+                  {isAuction && dates && <div className="lbl">ประกาศครั้งที่ {current.data.round} · ปิดประกาศ {thd(dates.ann)} ถึง {thd(dates.viewTo)} · วันขาย {thd(dates.sale)}</div>}
+                  {current.data.ids.map((id) => {
+                    const a = asset(id);
+                    if (!a) return null;
+                    return (
+                      <div key={id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', padding: '8px 0', borderBottom: '1px solid #edf1f2' }}>
+                        <Icon kind={iconOf(a.cat)} size={28} />
+                        <div style={{ flex: '2 1 180px', minWidth: 0 }}><div>{a.name}</div><div className="lbl">{a.code} · ราคาซื้อ {baht(a.price)}</div></div>
+                        {isAuction && (
+                          <div className="fld" style={{ flex: '1 1 120px' }}>
+                            <label htmlFor={'mn-' + id} className="lbl">ราคาขั้นต่ำ (บาท)</label>
+                            <input id={'mn-' + id} className="inp" inputMode="numeric" value={desk.draft.minP[id] ?? ''} onChange={(e) => svc.setMinPrice(id, e.target.value)} disabled={current.data.announced} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {isAuction && !current.data.announced && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <button className="btn pri" onClick={() => svc.announce()}>ปิดประกาศขายทอดตลาด</button>
+                      <button className="btn" onClick={() => onPrint('auction')}>ดูร่างประกาศ</button>
+                    </div>
+                  )}
                 </>
               )}
             </>

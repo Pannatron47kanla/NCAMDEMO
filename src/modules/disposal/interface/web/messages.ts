@@ -6,6 +6,7 @@ type Params = Record<string, string | number> | undefined;
 const TEXT: Record<string, (p: NonNullable<Params>) => string> = {
   BORROWED: () => 'ถูกยืมอยู่ ต้องรับคืนก่อน',
   DIRECT_SALE_LIMIT: (p) => 'ขายเฉพาะเจาะจงไม่ได้ ราคาซื้อรวม ' + baht(p.total!) + ' เกิน 500,000 บาท ให้ใช้วิธีขายทอดตลาด (ทางเลือก A4)',
+  MIN_PRICE_REQUIRED: () => 'กรอกราคาประเมินขั้นต่ำให้ครบทุกรายการก่อนปิดประกาศ',
   OPEN_TICKET: () => 'มีงานซ่อมค้าง ต้องปิดใบงานก่อน',
 };
 

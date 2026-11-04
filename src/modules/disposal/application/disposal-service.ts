@@ -112,6 +112,8 @@ export class DisposalService {
   private edit(p: Partial<CaseDraft>): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, ...p }, note: null })); }
 
   setFault(fault: Fault): void { this.edit({ fault }); }
+  /** Digits only, as the field allows. */
+  setMinPrice(id: string, typed: string): void { this.desk.set((d) => ({ ...d, draft: { ...d.draft, minP: { ...d.draft.minP, [id]: typed.replace(/[^0-9]/g, '') } }, note: null })); }
 
   /**
    * Loads the open case, runs one step on a copy, applies what it does to the assets and saves it.
@@ -142,4 +144,6 @@ export class DisposalService {
   approve(): void {
     this.step((c) => c.approve(c.data.method, c.data.ids.reduce((t, id) => t + (this.assets.findById(id)?.price ?? 0), 0)));
   }
+
+  announce(): void { this.step((c) => c.announce(this.desk.get().draft.minP)); }
 }

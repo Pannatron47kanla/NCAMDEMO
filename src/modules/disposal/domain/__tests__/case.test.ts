@@ -92,3 +92,35 @@ describe('recording the finding and approving the method', () => {
     expect(c.data.step).toBe(3);
   });
 });
+
+function atStep3(): DisposalCase {
+  const c = open();
+  c.recordFact('none');
+  c.approve('auction', 38400);
+  return c;
+}
+
+describe('closing the auction notice', () => {
+  it('AC35: a missing minimum price throws MIN_PRICE_REQUIRED and changes nothing', () => {
+    const c = atStep3();
+    let error: unknown;
+    try { c.announce({ A16: '5000' }); } catch (e) { error = e; }
+    expect((error as DomainError).code).toBe('MIN_PRICE_REQUIRED');
+    expect(c.data.announced).toBe(false);
+    expect(c.data.minP).toEqual({});
+  });
+
+  it('AC35: a zero or empty minimum price throws MIN_PRICE_REQUIRED', () => {
+    expect(() => atStep3().announce({ A16: '5000', A17: '0' })).toThrow(expect.objectContaining({ code: 'MIN_PRICE_REQUIRED' }));
+    expect(() => atStep3().announce({ A16: '', A17: '5000' })).toThrow(expect.objectContaining({ code: 'MIN_PRICE_REQUIRED' }));
+  });
+
+  it('AC35: with all minimum prices the notice is closed, with a history line per asset on the announcement date', () => {
+    const c = atStep3();
+    const effect = c.announce({ A16: '5000', A17: '12000' });
+    expect(c.data.announced).toBe(true);
+    expect(c.data.minP).toEqual({ A16: 5000, A17: 12000 });
+    expect(effect.lines.map((l) => l.text)).toEqual(['ปิดประกาศขายทอดตลาด ครั้งที่ 1 ราคาขั้นต่ำ 5,000 บาท', 'ปิดประกาศขายทอดตลาด ครั้งที่ 1 ราคาขั้นต่ำ 12,000 บาท']);
+    expect(effect.lines[0]!.date).toEqual(c.data.plan.ann);
+  });
+});
