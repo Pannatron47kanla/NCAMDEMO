@@ -19,6 +19,8 @@ const TEXT: Record<string, (p: NonNullable<Params>) => string> = {
   ITEM_ADDED: (p) => 'เพิ่ม ' + p.name,
   ITEM_REMOVED: (p) => 'เอา ' + p.name + ' ออกจากรายการ',
   NO_OPEN_LOAN: (p) => 'ไม่มีรายการยืมค้างของ ' + p.name,
+  LOAN_FOUND: (p) => 'พบใบยืม ' + p.id,
+  RETURN_SAVED: () => 'บันทึกการรับคืนแล้ว',
   BORROWER_OK: () => 'ผ่านการตรวจสิทธิ์ สแกนครุภัณฑ์ที่จะจ่ายได้เลย',
 };
 

@@ -3,7 +3,8 @@ import { th } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
 import { createStore, type Store } from '../../../shared/store';
 import { cartItemFor, isInCart, type CartItem, type CartPart } from '../domain/cart';
-import type { BorrowerRepository, LoanRepository } from '../domain/repositories';
+import type { AssetStatus } from '../../registry';
+import type { BorrowerRepository, ChargeRepository, LoanRepository } from '../domain/repositories';
 import type { ReturnCondition } from '../domain/return';
 import type { LoanSettings } from '../domain/loan-settings';
 import type { AssetsPort } from './ports';
@@ -26,6 +27,8 @@ export interface CounterState {
   /** The loan just saved, until the officer starts a new one. */
   /** The returned asset the officer is checking (return mode). */
   ret: ReturnDraft | null;
+  /** The return just saved, until the next scan. */
+  retDone: ReturnDone | null;
   done: { loanId: string; due: Date; pending: boolean; count: number } | null;
 }
 
@@ -36,15 +39,28 @@ export interface ReturnDraft {
   cond: ReturnCondition;
 }
 
+/** What the card after a saved return shows. */
+export interface ReturnDone {
+  name: string;
+  who: string;
+  missText: string;
+  fine: number;
+  lateDays: number;
+  finePerDay: number;
+  loss: number;
+  status: AssetStatus;
+}
+
 export interface CounterDeps {
   borrowers: BorrowerRepository;
   loans: LoanRepository;
+  charges: ChargeRepository;
   settings: Store<LoanSettings>;
   assets: AssetsPort;
 }
 
 export function initialCounterState(): CounterState {
-  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, ret: null, done: null };
+  return { mode: 'borrow', scan: '', borrowerCode: '', blocked: false, cart: [], msg: null, ret: null, retDone: null, done: null };
 }
 
 /** The เคาน์เตอร์ยืม-คืน: one scan box that first takes the borrower, then assets. */
@@ -59,8 +75,8 @@ export class CounterService {
 
   /** Borrow keeps the borrower and cart. Return starts clean (mockup setBorrow / setReturn). */
   setMode(mode: CounterState['mode']): void {
-    if (mode === 'borrow') this.patch({ mode, msg: null, scan: '', ret: null });
-    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [], ret: null, done: null });
+    if (mode === 'borrow') this.patch({ mode, msg: null, scan: '', ret: null, retDone: null });
+    else this.patch({ mode, msg: null, scan: '', borrowerCode: '', blocked: false, cart: [], done: null });
   }
 
   removeFromCart(assetId: string): void {
@@ -156,6 +172,48 @@ export class CounterService {
     if (!asset) return this.refuse('ASSET_NOT_FOUND', { code });
     const loan = this.deps.loans.findHolding(asset.id);
     if (!loan) return this.refuse('NO_OPEN_LOAN', { name: asset.name });
+    this.patch({
+      scan: '', retDone: null, msg: { kind: 'ok', code: 'LOAN_FOUND', params: { id: loan.id } },
+      ret: { loanId: loan.id, assetId: asset.id, parts: asset.parts.map((p) => ({ ...p, checked: true })), cond: 'สภาพดี' },
+    });
+  }
+
+  /** Ticks or unticks a part of the asset being returned. */
+  toggleReturnPart(index: number): void {
+    const r = this.state.get().ret;
+    if (!r) return;
+    this.patch({ ret: { ...r, parts: r.parts.map((p, i) => (i === index ? { ...p, checked: !p.checked } : p)) } });
+  }
+
+  setReturnCondition(cond: ReturnCondition): void {
+    const r = this.state.get().ret;
+    if (r) this.patch({ ret: { ...r, cond } });
+  }
+
+  /** The officer drops the return form. */
+  cancelReturn(): void {
+    this.patch({ ret: null, msg: null });
+  }
+
+  /** Records the return. Does nothing when no return is open (so a second press changes nothing). */
+  confirmReturn(): void {
+    const r = this.state.get().ret;
+    if (!r) return;
+    const loan = this.deps.loans.findById(r.loanId);
+    const asset = this.deps.assets.findById(r.assetId);
+    const borrower = loan ? this.deps.borrowers.findByCode(loan.borrowerCode) : undefined;
+    if (!loan || !asset || !borrower) return;
+    const now = this.clock.now();
+    const settings = this.deps.settings.get();
+    const out = loan.receiveReturn({ assetId: asset.id, assetName: asset.name, parts: r.parts, condition: r.cond }, settings, now);
+    this.deps.loans.save(out.loan);
+    this.deps.assets.setStatus(asset.id, out.assetStatus);
+    const text = 'รับคืนจาก ' + borrower.name + (out.lateDays ? ' ช้า ' + out.lateDays + ' วัน' : ' ตรงเวลา') + ' · ' + out.missingText;
+    this.deps.assets.addEvent(asset.id, { date: th(now, 0), text, doc: loan.id });
+    this.patch({
+      ret: null, msg: { kind: 'ok', code: 'RETURN_SAVED' },
+      retDone: { name: asset.name, who: borrower.name, missText: out.missingText, fine: 0, lateDays: out.lateDays, finePerDay: settings.finePerDay, loss: 0, status: out.assetStatus },
+    });
   }
 
   /** Shows the error under the scan box (clearing the box) and throws it, as the mockup's `err()` shows it. */

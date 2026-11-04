@@ -1,7 +1,8 @@
 import type { Store } from '../../../shared/store';
 import type { Borrower } from '../domain/borrower';
+import type { Charge } from '../domain/charge';
 import type { Loan } from '../domain/loan';
-import type { BorrowerRepository, LoanRepository } from '../domain/repositories';
+import type { BorrowerRepository, ChargeRepository, LoanRepository } from '../domain/repositories';
 
 export class InMemoryBorrowerRepository implements BorrowerRepository {
   constructor(private readonly borrowers: Store<Borrower[]>) {}
@@ -24,5 +25,20 @@ export class InMemoryLoanRepository implements LoanRepository {
   }
   save(loan: Loan): void {
     this.loans.set((list) => list.map((l) => (l.id === loan.id ? loan : l)));
+  }
+}
+
+/** Charges in a store (the mockup numbers them CH1, CH2, ...). */
+export class InMemoryChargeRepository implements ChargeRepository {
+  constructor(private readonly charges: Store<Charge[]>, private seq = 1) {}
+  list(): Charge[] { return this.charges.get().slice(); }
+  findById(id: string): Charge | undefined { return this.charges.get().find((c) => c.id === id); }
+  nextId(): string { return 'CH' + this.seq; }
+  add(charge: Charge): void {
+    this.seq += 1;
+    this.charges.set((list) => list.concat([charge]));
+  }
+  save(charge: Charge): void {
+    this.charges.set((list) => list.map((c) => (c.id === charge.id ? charge : c)));
   }
 }

@@ -1,5 +1,8 @@
+import { diffDays } from '../../../shared/dates';
 import { DomainError } from '../../../shared/domain-error';
-import type { ReturnInput, ReturnOutcome } from './return';
+import type { LoanSettings } from './loan-settings';
+import type { CartPart } from './cart';
+import { lossOf, type ReturnInput, type ReturnOutcome, type ReturnQuote } from './return';
 
 /** One asset on a loan. `kit` is true when the asset has parts, which is what the student limit counts. */
 export interface LoanItem {
@@ -44,10 +47,25 @@ export class Loan {
     return new Loan({ ...this.props, pending: false });
   }
 
+  /** Whole days past the due date (0 when on time). */
+  lateDays(now: Date): number {
+    return Math.max(0, diffDays(this.props.due, now));
+  }
+
+  /** The fine and loss charge a return would create. */
+  quoteReturn(parts: readonly CartPart[], settings: LoanSettings, now: Date): ReturnQuote {
+    const lateDays = this.lateDays(now);
+    return { lateDays, fine: lateDays * settings.finePerDay, loss: lossOf(parts, settings.lossPct) };
+  }
+
   /** The asset comes back. Throws `NO_OPEN_LOAN` when this loan has no open item for it. */
-  receiveReturn(input: ReturnInput): ReturnOutcome {
+  receiveReturn(input: ReturnInput, _settings: LoanSettings, now: Date): ReturnOutcome {
     if (!this.props.items.some((i) => i.assetId === input.assetId && !i.returned)) throw new DomainError('NO_OPEN_LOAN', { name: input.assetName });
-    throw new Error('not implemented yet');
+    const lateDays = this.lateDays(now);
+    const missing = input.parts.filter((p) => !p.checked);
+    const missingText = missing.length ? 'ขาด ' + missing.map((p) => p.name + ' × ' + p.qty).join(', ') : 'ครบทุกชิ้น';
+    const loan = new Loan({ ...this.props, items: this.props.items.map((i) => (i.assetId === input.assetId ? { ...i, returned: true } : { ...i })) });
+    return { assetStatus: 'พร้อมใช้', charges: [], needsRepair: false, missingText, lateDays, loan };
   }
 
   openItems(): LoanItem[] {

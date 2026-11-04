@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addDays } from '../../../../shared/dates';
+import { DEFAULT_LOAN_SETTINGS } from '../loan-settings';
 import { DomainError } from '../../../../shared/domain-error';
 import { Loan, type LoanProps } from '../loan';
 import type { ReturnInput } from '../return';
@@ -30,7 +31,25 @@ function codeOf(fn: () => unknown): string | undefined {
 describe('return of an asset', () => {
   it('AC15: an asset with no open item on the loan throws NO_OPEN_LOAN', () => {
     const returned = loan({ items: [{ assetId: 'A2', returned: true, note: 'ครบทุกชิ้น', kit: true }] });
-    expect(codeOf(() => returned.receiveReturn(input()))).toBe('NO_OPEN_LOAN');
-    expect(codeOf(() => loan().receiveReturn(input({ assetId: 'A9' })))).toBe('NO_OPEN_LOAN');
+    expect(codeOf(() => returned.receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today))).toBe('NO_OPEN_LOAN');
+    expect(codeOf(() => loan().receiveReturn(input({ assetId: 'A9' }), DEFAULT_LOAN_SETTINGS, today))).toBe('NO_OPEN_LOAN');
+  });
+});
+
+describe('on-time return', () => {
+  it('AC16: on time, complete and in good condition: พร้อมใช้, no charges, and the item is marked returned', () => {
+    const onTime = loan({ due: addDays(today, 2) });
+    const outcome = onTime.receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today);
+    expect(outcome.assetStatus).toBe('พร้อมใช้');
+    expect(outcome.charges).toEqual([]);
+    expect(outcome.needsRepair).toBe(false);
+    expect(outcome.missingText).toBe('ครบทุกชิ้น');
+    expect(outcome.lateDays).toBe(0);
+    expect(outcome.loan.openItems()).toEqual([]);
+    expect(onTime.openItems()).toHaveLength(1);
+  });
+
+  it('AC16: returning on the due date is not late', () => {
+    expect(loan({ due: today }).receiveReturn(input(), DEFAULT_LOAN_SETTINGS, today).lateDays).toBe(0);
   });
 });

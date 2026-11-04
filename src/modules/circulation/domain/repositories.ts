@@ -1,4 +1,5 @@
 import type { Borrower } from './borrower';
+import type { Charge } from './charge';
 import type { Loan } from './loan';
 
 export interface BorrowerRepository {
@@ -15,4 +16,13 @@ export interface LoanRepository {
   nextId(): string;
   add(loan: Loan): void;
   save(loan: Loan): void;
+}
+
+export interface ChargeRepository {
+  list(): Charge[];
+  findById(id: string): Charge | undefined;
+  /** The id the next charge will get. */
+  nextId(): string;
+  add(charge: Charge): void;
+  save(charge: Charge): void;
 }

@@ -5,6 +5,7 @@ import { useStore } from '../../../../shared/web/useStore';
 import type { Asset } from '../../../registry';
 import type { CirculationModule } from '../../module';
 import { BorrowPanel } from './BorrowPanel';
+import { ReturnPanel } from './ReturnPanel';
 import { messageText } from './messages';
 import { counterProgress } from './progress';
 
@@ -16,8 +17,6 @@ export interface CounterScreenProps {
   now: Date;
   /** Opens the loan slip for printing. */
   onPrintSlip(loanId: string): void;
-  /** The return side of the counter (shown in return mode). A plain hint is shown until it is given. */
-  returnPanel?: ReactNode;
   /** The charges column to the right of the counter. */
   aside?: ReactNode;
 }
@@ -40,7 +39,7 @@ function modeStyle(on: boolean): CSSProperties {
 interface Chip { code: string; sub: string }
 
 // Counter screen, ported from mockup lines 510-549 (shared frame) and 551-605 (borrow panel).
-export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPanel, aside }: CounterScreenProps) {
+export function CounterScreen({ circulation, assets, now, onPrintSlip, aside }: CounterScreenProps) {
   const counter = circulation.counter;
   const c = useStore(counter.state);
   const borrowers = useStore(circulation.borrowers);
@@ -57,6 +56,13 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPan
       return a ? [{ code: a.code, sub: a.name.replace(/ \(.*\)/, '') + ' · ' + a.status }] : [];
     });
   }
+
+  const retLoan = c.ret ? loans.find((l) => l.id === c.ret!.loanId) : undefined;
+  const retAsset = c.ret ? assets.find((a) => a.id === c.ret!.assetId) : undefined;
+  const retWho = retLoan ? borrowers.find((b) => b.code === retLoan.borrowerCode) : undefined;
+  const retView = c.ret && retLoan && retAsset && retWho
+    ? { name: retAsset.name, code: retAsset.code, loanId: retLoan.id, who: retWho.name, start: retLoan.startedAt, due: retLoan.due }
+    : null;
 
   const nameOf = (id: string) => assets.find((a) => a.id === id)?.name ?? id;
   const overdue = borrower && c.blocked
@@ -78,6 +84,14 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPan
     }
   };
 
+  const confirmReturn = () => {
+    try {
+      counter.confirmReturn();
+    } catch (err) {
+      if (!(err instanceof DomainError)) throw err;
+    }
+  };
+
   const progress = counterProgress({
     mode: c.mode,
     borrowerOk: !!borrower && !c.blocked,
@@ -85,8 +99,8 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPan
     cartCount: c.cart.length,
     partsOk: c.cart.length > 0 && c.cart.every((it) => it.parts.every((p) => p.checked)),
     loanDone: !!c.done,
-    returnChosen: false,
-    returnDone: false,
+    returnChosen: !!c.ret,
+    returnDone: !!c.retDone,
   });
 
   return (
@@ -147,7 +161,14 @@ export function CounterScreen({ circulation, assets, now, onPrintSlip, returnPan
                 onConfirm={() => counter.confirmBorrow()} onReset={() => counter.reset()} onPrintSlip={onPrintSlip}
               />
             )
-            : (returnPanel ?? <div className="card" style={{ padding: 20, color: '#46565c' }}>สแกนป้าย QR ของครุภัณฑ์ที่นำมาคืน ระบบจะค้นใบยืมให้เอง</div>)}
+            : (
+              <ReturnPanel
+                draft={c.ret} done={c.retDone} view={retView} finePerDay={settings.finePerDay} lossPct={settings.lossPct}
+                quote={c.ret && retLoan ? retLoan.quoteReturn(c.ret.parts, settings, now) : null}
+                onTogglePart={(i) => counter.toggleReturnPart(i)} onCondition={(v) => counter.setReturnCondition(v)}
+                onCancel={() => counter.cancelReturn()} onConfirm={confirmReturn}
+              />
+            )}
         </div>
         {aside}
       </div>
