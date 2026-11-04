@@ -6,7 +6,7 @@
 
 **Architecture:** Business rules move from the mockup's single class into five DDD contexts under `src/modules/`. In-memory repositories hold the state, and React subscribes with `useSyncExternalStore`. There is no router: `screen` state selects the page, as in the mockup.
 
-**Tech stack:** React 18.3.1 (the mockup's version), Vite, TypeScript in strict mode, Vitest, Testing Library, Playwright, ESLint flat config.
+**Tech stack:** React 19 (the mockup uses 18.3.1; user ruling: keep 19 because all checks pass and pixel parity shows no effect), Vite, TypeScript in strict mode, Vitest, Testing Library, Playwright, ESLint flat config.
 
 **Spec:** `docs/usecases/UC-01-react-vite-port.md`. Boundaries: `docs/architecture/context-map.md`.
 
