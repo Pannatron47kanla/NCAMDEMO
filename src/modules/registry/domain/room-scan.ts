@@ -1,3 +1,5 @@
+import type { Asset } from './asset';
+import { PENDING_ROOM } from './constants';
 import { ROOMS, roomCode, type Room } from './locations';
 
 // Room assignment by scanning, ported from the mockup (rsNew, rsScan, rsSave; lines 1752 and 1928-1957).
@@ -56,8 +58,29 @@ export function chooseRoom(state: RoomScanState, room: string): RoomScanState {
     : { ...state, room: null, msg: null };
 }
 
-/** Handles one scan. An empty code does nothing; a room code or name changes the destination. */
-export function scanCode(state: RoomScanState, raw: string | null | undefined): RoomScanState {
+/** Why an asset in this status cannot change room, in the mockup's words; undefined when it can. */
+export function blockReason(asset: Asset): string | undefined {
+  if (asset.status === 'ถูกยืม') return 'ถูกยืมอยู่ ต้องรับคืนก่อน';
+  if (asset.status === 'จำหน่ายแล้ว') return 'ลงจ่ายออกจากทะเบียนแล้ว';
+  if (asset.status === 'รอจำหน่าย') return 'อยู่ระหว่างเรื่องจำหน่าย';
+  return undefined;
+}
+
+/** What scanning this asset into `room` means: blocked, placed for the first time, already there, or a move. */
+export function classify(asset: Asset, room: string): Pick<ScanItem, 'kind' | 'why'> {
+  const why = blockReason(asset);
+  if (why) return { kind: 'block', why };
+  if (asset.room === PENDING_ROOM) return { kind: 'new', why: '' };
+  if (asset.room === room) return { kind: 'same', why: '' };
+  return { kind: 'move', why: '' };
+}
+
+/**
+ * Handles one scan against the register. An empty code does nothing; a room code or name changes the destination;
+ * an asset code (any letter case, spaces cut off) is added to the list. An unknown code is an error and a code
+ * already in the list is a warning and is not counted again.
+ */
+export function scanCode(state: RoomScanState, raw: string | null | undefined, assets: readonly Asset[]): RoomScanState {
   const code = normalizeCode(raw);
   if (!code) return state;
   const room = roomFor(code);
@@ -65,5 +88,19 @@ export function scanCode(state: RoomScanState, raw: string | null | undefined): 
     return { ...state, room: room.name, scan: '', done: null, msg: { kind: 'ok', code: 'ROOM_CHANGED', params: { room: room.name } } };
   }
   if (!state.room) return { ...state, scan: '', msg: { kind: 'warn', code: 'ROOM_REQUIRED' } };
-  return state;
+  const asset = assets.find((x) => x.code.toUpperCase() === code);
+  if (!asset) return { ...state, scan: '', msg: { kind: 'err', code: 'ASSET_UNKNOWN', params: { code } } };
+  if (state.items.some((i) => i.id === asset.id)) {
+    return { ...state, scan: '', msg: { kind: 'warn', code: 'SCAN_DUPLICATE', params: { name: asset.name } } };
+  }
+  const { kind, why } = classify(asset, state.room);
+  const params = { name: asset.name, room: state.room, from: asset.room, why };
+  const msg: Record<ScanKind, ScanMessage> = {
+    block: { kind: 'err', code: 'SCAN_BLOCKED', params },
+    new: { kind: 'ok', code: 'SCAN_NEW', params },
+    same: { kind: 'ok', code: 'SCAN_SAME', params },
+    move: { kind: 'warn', code: 'SCAN_MOVE', params },
+  };
+  const item: ScanItem = { id: asset.id, from: asset.room, to: state.room, kind, why, ok: false };
+  return { ...state, scan: '', done: null, items: [item].concat(state.items), msg: msg[kind] };
 }
