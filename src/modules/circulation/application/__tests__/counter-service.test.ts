@@ -103,3 +103,16 @@ describe('counter cart', () => {
     expect(state().msg).toEqual({ kind: 'warn', code: 'ITEM_REMOVED', params: { name: a.name } });
   });
 });
+
+describe('counter asset status', () => {
+  it('AC11: an asset that is not พร้อมใช้ throws ASSET_NOT_AVAILABLE with its name and status', () => {
+    const { counter, registry, state } = setup();
+    const a = registry.catalog.findById('A1')!;
+    registry.catalog.setStatus('A1', 'รอซ่อม');
+    counter.scan('T0007');
+    const error = refusal(() => counter.scan(a.code));
+    expect(error).toMatchObject({ code: 'ASSET_NOT_AVAILABLE', params: { name: a.name, status: 'รอซ่อม' } });
+    expect(state().msg).toEqual({ kind: 'err', code: 'ASSET_NOT_AVAILABLE', params: { name: a.name, status: 'รอซ่อม' } });
+    expect(state().cart).toEqual([]);
+  });
+});

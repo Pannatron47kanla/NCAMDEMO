@@ -11,6 +11,7 @@ const TEXT: Record<string, (p: NonNullable<Params>) => string> = {
   BORROWER_BLOCKED: () => 'ผู้ยืมรายนี้งดยืมจนกว่าจะคืนรายการที่ค้าง',
   ASSET_NOT_FOUND: (p) => 'ไม่พบรหัสครุภัณฑ์ ' + p.code,
   ALREADY_IN_CART: (p) => 'สแกนซ้ำ: ' + p.name + ' อยู่ในรายการแล้ว ไม่เพิ่มซ้ำ',
+  ASSET_NOT_AVAILABLE: (p) => 'จ่ายไม่ได้: ' + p.name + ' สถานะ "' + p.status + '"',
   ITEM_ADDED: (p) => 'เพิ่ม ' + p.name,
   ITEM_REMOVED: (p) => 'เอา ' + p.name + ' ออกจากรายการ',
   BORROWER_OK: () => 'ผ่านการตรวจสิทธิ์ สแกนครุภัณฑ์ที่จะจ่ายได้เลย',

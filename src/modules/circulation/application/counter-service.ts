@@ -89,6 +89,14 @@ export class CounterService {
       this.patch({ scan: '', msg: { kind: 'warn', code: 'ALREADY_IN_CART', params: { name: asset.name } } });
       return;
     }
+    const borrower = this.deps.borrowers.findByCode(c.borrowerCode);
+    if (!borrower) return this.refuse('BORROWER_NOT_FOUND', { code: c.borrowerCode });
+    try {
+      borrower.assertCanTake(asset);
+    } catch (e) {
+      if (e instanceof DomainError) return this.refuse(e.code, e.params);
+      throw e;
+    }
     this.patch({ scan: '', cart: c.cart.concat([cartItemFor(asset)]), msg: { kind: 'ok', code: 'ITEM_ADDED', params: { name: asset.name } } });
   }
 

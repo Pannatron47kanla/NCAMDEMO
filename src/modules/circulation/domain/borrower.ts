@@ -1,3 +1,5 @@
+import { DomainError } from '../../../shared/domain-error';
+import type { LendableAsset } from './cart';
 import type { Loan } from './loan';
 
 export type BorrowerType = 'นักศึกษา' | 'อาจารย์';
@@ -32,5 +34,10 @@ export class Borrower {
   /** Kits (assets with parts) this borrower still holds. */
   kitsHeld(loans: readonly Loan[]): number {
     return loans.filter((l) => l.borrowerCode === this.code).reduce((n, l) => n + l.openItems().filter((i) => i.kit).length, 0);
+  }
+
+  /** Throws a DomainError when this borrower may not take the asset now. */
+  assertCanTake(asset: LendableAsset): void {
+    if (asset.status !== 'พร้อมใช้') throw new DomainError('ASSET_NOT_AVAILABLE', { name: asset.name, status: asset.status });
   }
 }

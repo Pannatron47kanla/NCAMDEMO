@@ -87,4 +87,13 @@ describe('counter screen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('เอา ' + a.name + ' ออกจากรายการ');
     expect(screen.getByText('ยังไม่มีรายการ สแกนป้าย QR ครุภัณฑ์เพื่อเพิ่มลงรายการที่จะจ่าย')).toBeInTheDocument();
   });
+
+  it('AC11: scanning an asset that is not ready shows the Thai error with its status', async () => {
+    const { user, registry } = show();
+    const a = registry.catalog.findById('A1')!;
+    registry.catalog.setStatus('A1', 'รอซ่อม');
+    await user.click(screen.getByRole('button', { name: /T0007/ }));
+    await user.type(screen.getByRole('textbox'), `${a.code}{Enter}`);
+    expect(screen.getByRole('status')).toHaveTextContent(`จ่ายไม่ได้: ${a.name} สถานะ "รอซ่อม"`);
+  });
 });
